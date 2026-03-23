@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>WorkBoard</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#f6f7fb; --sidebar-bg:#1a1f36; --sidebar-hover:#252b47; --sidebar-active:#2e3558;
+  --sidebar-text:#c4c9e2; --sidebar-text-muted:#6b7280;
+  --white:#ffffff; --border:#e2e5f0; --border-light:#f0f2fa;
+  --text:#1a1f36; --text-muted:#6e7592; --text-light:#9da3bd;
+  --primary:#0073ea; --primary-hover:#0060c0; --primary-light:#e8f2ff;
+  --red:#e44258; --green:#00c875; --orange:#fdab3d; --purple:#a25ddc;
+  --done:#00c875; --working:#fdab3d; --stuck:#e44258; --not-started:#c4c4c4;
+  --shadow-sm:0 1px 4px rgba(0,0,0,.08); --shadow-md:0 4px 16px rgba(0,0,0,.10); --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+  --radius:8px; --radius-sm:4px; --radius-lg:12px;
+  --topbar-h:56px; --sidebar-w:260px; --bottom-nav-h:60px;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:'Figtree',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100%;overflow:hidden;font-size:14px;padding-top:var(--safe-top);}
+
+/* ─ DRAWER OVERLAY ─ */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199;display:none;animation:fadeIn .2s;}
+.drawer-overlay.visible{display:block;}
+
+/* ─ SIDEBAR ─ */
+.sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);display:flex;flex-direction:column;height:100%;flex-shrink:0;overflow:hidden;transition:width .22s ease;z-index:200;}
+.sidebar.collapsed{width:56px;}
+@media(max-width:768px){
+  .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-w)!important;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-lg);}
+  .sidebar.drawer-open{transform:translateX(0);}
+}
+.sidebar.collapsed .logo-text,.sidebar.collapsed .nav-label,.sidebar.collapsed .section-title,
+.sidebar.collapsed .board-name-text,.sidebar.collapsed .new-board-btn span,.sidebar.collapsed .workspace-name{display:none;}
+@media(max-width:768px){
+  .sidebar.collapsed .logo-text,.sidebar.collapsed .nav-label,.sidebar.collapsed .section-title,
+  .sidebar.collapsed .board-name-text,.sidebar.collapsed .new-board-btn span,.sidebar.collapsed .workspace-name{display:flex!important;}
+}
+.sidebar-logo{height:var(--topbar-h);display:flex;align-items:center;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.07);gap:10px;flex-shrink:0;}
+.logo-icon{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#0073ea,#a25ddc);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;}
+.logo-text{color:#fff;font-weight:700;font-size:16px;white-space:nowrap;}
+.sidebar-search{padding:10px 10px 6px;flex-shrink:0;}
+.sidebar.collapsed .sidebar-search{display:none;}
+.sidebar-search input{width:100%;background:rgba(255,255,255,.1);border:none;border-radius:var(--radius-sm);color:var(--sidebar-text);font-size:13px;padding:8px 10px;outline:none;font-family:inherit;}
+.sidebar-search input::placeholder{color:rgba(196,201,226,.4);}
+.sidebar-nav{flex:1;overflow-y:auto;padding:4px 0;}
+.sidebar-nav::-webkit-scrollbar{width:3px;}
+.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;color:var(--sidebar-text);cursor:pointer;border-radius:6px;margin:1px 6px;transition:background .15s;white-space:nowrap;font-size:13.5px;font-weight:500;min-height:44px;}
+.nav-item:hover,.nav-item:active{background:var(--sidebar-hover);}
+.nav-item.active{background:var(--sidebar-active);color:#fff;}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;}
+.sidebar.collapsed .nav-item{justify-content:center;padding:10px;margin:2px 6px;}
+@media(max-width:768px){.sidebar .nav-item{justify-content:flex-start!important;padding:9px 14px!important;margin:1px 6px!important;}}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--sidebar-text-muted);padding:14px 20px 4px;white-space:nowrap;}
+.board-item{display:flex;align-items:center;gap:8px;padding:8px 14px;color:var(--sidebar-text);cursor:pointer;border-radius:6px;margin:1px 6px;transition:background .15s;white-space:nowrap;font-size:13px;min-height:44px;}
+.board-item:hover,.board-item:active{background:var(--sidebar-hover);}
+.board-item.active{background:var(--sidebar-active);color:#fff;}
+.board-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.board-name-text{overflow:hidden;text-overflow:ellipsis;}
+.sidebar.collapsed .board-item{justify-content:center;padding:8px;}
+@media(max-width:768px){.sidebar .board-item{justify-content:flex-start!important;padding:8px 14px!important;}}
+.new-board-btn{display:flex;align-items:center;gap:8px;padding:8px 14px;color:rgba(196,201,226,.6);cursor:pointer;font-size:12.5px;margin:2px 6px;border-radius:6px;transition:all .15s;min-height:44px;}
+.new-board-btn:hover{background:var(--sidebar-hover);color:var(--sidebar-text);}
+.sidebar.collapsed .new-board-btn{justify-content:center;padding:8px;}
+@media(max-width:768px){.sidebar .new-board-btn{justify-content:flex-start!important;padding:8px 14px!important;}}
+.sidebar-footer{border-top:1px solid rgba(255,255,255,.07);padding:12px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;padding-bottom:calc(12px + var(--safe-bottom));}
+.avatar-sm{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
+.workspace-name{color:var(--sidebar-text);font-size:12.5px;font-weight:600;white-space:nowrap;}
+
+/* ─ MAIN ─ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+
+/* ─ TOP BAR ─ */
+.topbar{height:var(--topbar-h);background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;z-index:50;}
+.topbar-title{font-size:17px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.topbar-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+@media(max-width:768px){.topbar{padding:0 10px;}.topbar-title{font-size:15px;}.hide-mobile{display:none!important;}}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;min-height:38px;white-space:nowrap;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover,.btn-primary:active{background:var(--primary-hover);}
+.btn-secondary{background:transparent;color:var(--text);border:1.5px solid var(--border);}
+.btn-secondary:hover,.btn-secondary:active{background:var(--border-light);}
+.btn svg{width:16px;height:16px;}
+.btn-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);background:transparent;border:1.5px solid var(--border);cursor:pointer;color:var(--text-muted);transition:all .15s;flex-shrink:0;}
+.btn-icon:hover,.btn-icon:active{background:var(--bg);}
+.btn-icon svg{width:18px;height:18px;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;flex:1;max-width:240px;}
+.search-box svg{width:15px;height:15px;color:var(--text-muted);flex-shrink:0;}
+.search-box input{border:none;background:transparent;font-family:inherit;font-size:13px;outline:none;color:var(--text);width:100%;}
+
+/* ─ VIEW TABS ─ */
+.view-tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.view-tabs::-webkit-scrollbar{display:none;}
+.view-tab{padding:10px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2.5px solid transparent;transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
+.view-tab:hover{color:var(--text);}
+.view-tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+.view-tab svg{width:14px;height:14px;}
+.view-tab-add{padding:8px 10px;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;flex-shrink:0;}
+
+/* ─ TOOLBAR ─ */
+.toolbar{background:var(--white);padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.toolbar::-webkit-scrollbar{display:none;}
+.toolbar-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-muted);cursor:pointer;font-weight:500;transition:all .15s;border:none;background:transparent;font-family:inherit;white-space:nowrap;flex-shrink:0;min-height:34px;}
+.toolbar-btn:hover,.toolbar-btn:active{background:var(--bg);color:var(--text);}
+.toolbar-btn svg{width:14px;height:14px;}
+.toolbar-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0;}
+
+/* ─ BOARD CONTAINER ─ */
+.board-container{flex:1;overflow:auto;padding:14px;}
+.board-container::-webkit-scrollbar{width:6px;height:6px;}
+.board-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+@media(max-width:768px){.board-container{padding:10px 10px calc(10px + var(--bottom-nav-h) + var(--safe-bottom));}}
+
+/* ─ DESKTOP TABLE ─ */
+.board-table{min-width:820px;}
+.col-header-row{display:flex;align-items:center;margin-bottom:0;}
+.col-header-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;cursor:pointer;white-space:nowrap;user-select:none;}
+.col-header-item:first-child{flex:1;min-width:200px;}
+.col-header-item.fc{width:130px;flex-shrink:0;}
+.group-block{margin-bottom:18px;border-radius:var(--radius-lg);overflow:visible;}
+.group-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none;background:var(--white);border-radius:var(--radius) var(--radius) 0 0;border:1px solid var(--border);border-bottom:none;}
+.group-color-bar{width:6px;height:22px;border-radius:3px;flex-shrink:0;}
+.group-title-input{border:none;background:transparent;font-family:inherit;font-size:14px;font-weight:700;color:var(--text);outline:none;flex:1;}
+.group-title-input:focus{background:var(--primary-light);border-radius:4px;padding:2px 6px;}
+.group-count{font-size:12px;color:var(--text-muted);font-weight:500;}
+.gcollapse-btn{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);}
+.gcollapse-btn svg{width:14px;height:14px;transition:transform .2s;}
+.group-block.collapsed .gcollapse-btn svg{transform:rotate(-90deg);}
+.group-table{border:1px solid var(--border);border-top:none;background:var(--white);border-radius:0 0 var(--radius) var(--radius);overflow:hidden;}
+.group-block.collapsed .group-table{display:none;}
+.table-row{display:flex;align-items:center;border-bottom:1px solid var(--border-light);transition:background .1s;position:relative;}
+.table-row:last-of-type{border-bottom:none;}
+.table-row:hover{background:var(--primary-light);}
+.table-row.selected{background:var(--primary-light)!important;}
+.row-check{width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+.row-check input{accent-color:var(--primary);cursor:pointer;width:15px;height:15px;}
+.cell{padding:8px 10px;display:flex;align-items:center;min-height:42px;border-right:1px solid var(--border-light);}
+.cell:last-child{border-right:none;}
+.cell.nc{flex:1;min-width:200px;gap:8px;font-weight:500;}
+.cell.fc{width:130px;flex-shrink:0;}
+.item-name-input{border:none;background:transparent;font-family:inherit;font-size:13.5px;font-weight:500;color:var(--text);outline:none;flex:1;cursor:pointer;}
+.item-name-input:focus{cursor:text;}
+.sc{width:100%;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer;min-height:28px;white-space:nowrap;transition:filter .15s;}
+.sc:hover{filter:brightness(.95);}
+.sc-done{background:var(--done);color:#fff;}
+.sc-working{background:var(--working);color:#fff;}
+.sc-stuck{background:var(--stuck);color:#fff;}
+.sc-not-started{background:var(--not-started);color:#fff;}
+.pc{width:100%;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer;min-height:28px;white-space:nowrap;}
+.pc-critical{background:#333;color:#fff;}
+.pc-high{background:#e44258;color:#fff;}
+.pc-medium{background:#fdab3d;color:#fff;}
+.pc-low{background:#579bfc;color:#fff;}
+.pc-none{background:#c4c4c4;color:#fff;}
+.date-input{border:none;background:transparent;font-family:inherit;font-size:12.5px;color:var(--text);outline:none;cursor:pointer;width:100%;}
+.person-cell{display:flex;align-items:center;gap:3px;flex-wrap:wrap;}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;border:2px solid #fff;transition:transform .15s;}
+.avatar:hover{transform:scale(1.15);z-index:2;}
+.avatar-add{width:26px;height:26px;border-radius:50%;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:14px;transition:all .15s;}
+.avatar-add:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light);}
+.num-input{border:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);text-align:center;outline:none;width:100%;}
+.add-row{display:flex;align-items:center;gap:8px;padding:9px 46px;color:var(--text-muted);cursor:pointer;border-top:1px solid var(--border-light);font-size:13px;font-weight:500;transition:background .1s;background:var(--white);}
+.add-row:hover,.add-row:active{background:var(--primary-light);color:var(--primary);}
+.add-row svg{width:14px;height:14px;}
+.summary-row{display:flex;align-items:center;border-top:1px solid var(--border);padding:5px 0;background:rgba(0,0,0,.02);}
+.sum-cell{padding:4px 10px;}
+.sum-cell.nc{flex:1;min-width:200px;font-size:12px;font-weight:700;color:var(--text-muted);}
+.sum-cell.fc{width:130px;flex-shrink:0;font-size:12px;color:var(--text-muted);text-align:center;}
+.add-group-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--radius);font-size:13.5px;font-weight:600;color:var(--primary);cursor:pointer;border:1.5px dashed var(--primary);background:transparent;transition:all .15s;font-family:inherit;margin-top:6px;}
+.add-group-btn:hover,.add-group-btn:active{background:var(--primary-light);}
+.add-group-btn svg{width:15px;height:15px;}
+.pb-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:100%;}
+.pb-fill{height:100%;background:var(--done);border-radius:3px;transition:width .3s;}
+
+/* ─ MOBILE CARDS ─ */
+.mobile-board{display:none;}
+@media(max-width:768px){.desktop-board{display:none!important;}.mobile-board{display:block!important;}}
+.mg-block{margin-bottom:14px;}
+.mg-header{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--white);border-radius:var(--radius) var(--radius) 0 0;border:1px solid var(--border);border-bottom:none;cursor:pointer;}
+.mg-bar{width:5px;height:20px;border-radius:3px;flex-shrink:0;}
+.mg-name{font-size:14px;font-weight:700;flex:1;}
+.mg-count{font-size:12px;color:var(--text-muted);font-weight:500;}
+.mg-arrow svg{width:16px;height:16px;color:var(--text-muted);transition:transform .2s;}
+.mg-block.collapsed .mg-arrow svg{transform:rotate(-90deg);}
+.mg-block.collapsed .mg-cards{display:none;}
+.mg-cards{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;background:var(--white);}
+.mc{padding:13px 14px;border-bottom:1px solid var(--border-light);transition:background .1s;position:relative;}
+.mc:last-of-type{border-bottom:none;}
+.mc:active{background:var(--primary-light);}
+.mc.selected{background:var(--primary-light);}
+.mc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px;}
+.mc-check input{accent-color:var(--primary);width:17px;height:17px;margin-top:2px;cursor:pointer;}
+.mc-name{font-size:14px;font-weight:600;flex:1;line-height:1.4;cursor:pointer;}
+.mc-menu{padding:2px 4px;color:var(--text-muted);cursor:pointer;}
+.mc-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:9px;padding-right:27px;}
+.mc-badge{border-radius:var(--radius-sm);padding:3px 10px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;cursor:pointer;}
+.mc-footer{display:flex;align-items:center;justify-content:space-between;padding-right:27px;}
+.mc-date{font-size:11px;color:var(--text-muted);}
+.mc-people{display:flex;gap:3px;}
+.mc-add{display:flex;align-items:center;gap:8px;padding:12px 14px;color:var(--text-muted);font-size:13.5px;font-weight:500;cursor:pointer;border-top:1px solid var(--border-light);background:var(--white);}
+.mc-add:active{background:var(--primary-light);color:var(--primary);}
+.mc-add svg{width:14px;height:14px;}
+
+/* ─ BOTTOM NAV ─ */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:calc(var(--bottom-nav-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);background:var(--white);border-top:1px solid var(--border);z-index:150;}
+@media(max-width:768px){.bottom-nav{display:flex;}}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text-muted);transition:color .15s;padding:6px 0;}
+.bn-item.active{color:var(--primary);}
+.bn-item svg{width:22px;height:22px;}
+.bn-item span{font-size:10px;font-weight:600;}
+
+/* ─ FAB ─ */
+.fab{display:none;position:fixed;bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px);left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:26px;cursor:pointer;z-index:151;box-shadow:0 4px 16px rgba(0,115,234,.42);align-items:center;justify-content:center;transition:transform .15s;}
+.fab:active{transform:translateX(-50%) scale(.92);}
+@media(max-width:768px){.fab{display:flex;}}
+
+/* ─ DROPDOWN ─ */
+.dd-overlay{position:fixed;inset:0;z-index:400;}
+.dd-menu{position:fixed;background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:401;min-width:170px;overflow:hidden;animation:fadeIn .12s ease;}
+@media(max-width:768px){
+  .dd-menu{position:fixed!important;bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 8px)!important;top:auto!important;left:12px!important;right:12px!important;min-width:unset;border-radius:var(--radius-lg);}
+}
+.dd-item{padding:13px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500;transition:background .1s;}
+.dd-item:hover,.dd-item:active{background:var(--bg);}
+.dd-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+
+/* ─ MODAL ─ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:500;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s;padding:16px;}
+.modal{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:480px;max-height:90vh;overflow:auto;padding:22px;animation:slideUp .2s ease;}
+@media(max-width:768px){
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal{border-radius:var(--radius-lg) var(--radius-lg) 0 0;max-width:100%;max-height:88vh;padding:18px 18px calc(18px + var(--safe-bottom));}
+}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;display:none;}
+@media(max-width:768px){.modal-handle{display:block;}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-title{font-size:17px;font-weight:700;}
+.modal-close{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:20px;transition:background .15s;}
+.modal-close:hover,.modal-close:active{background:var(--bg);}
+.modal-input{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-family:inherit;font-size:15px;outline:none;color:var(--text);transition:border-color .15s;margin-bottom:14px;}
+.modal-input:focus{border-color:var(--primary);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:4px;}
+@media(max-width:768px){
+  .modal-actions{flex-direction:column-reverse;}
+  .modal-actions .btn{width:100%;justify-content:center;padding:13px;font-size:15px;}
+}
+
+/* ─ ITEM DETAIL PANEL ─ */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:flex-start;justify-content:flex-end;animation:fadeIn .15s;}
+.detail-panel{width:560px;max-width:95vw;height:100%;background:var(--white);box-shadow:var(--shadow-lg);overflow-y:auto;padding:24px;animation:slideLeft .22s ease;}
+@media(max-width:768px){
+  .detail-overlay{align-items:flex-end;}
+  .detail-panel{width:100%;max-width:100%;height:92vh;border-radius:var(--radius-lg) var(--radius-lg) 0 0;animation:slideUp .25s ease;padding:14px 14px calc(14px + var(--safe-bottom));}
+}
+.detail-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;display:none;}
+@media(max-width:768px){.detail-handle{display:block;}}
+.detail-title{border:none;background:transparent;font-family:inherit;font-size:20px;font-weight:800;color:var(--text);outline:none;width:100%;margin-bottom:16px;line-height:1.3;}
+.detail-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:6px;}
+.detail-textarea{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:14px;outline:none;color:var(--text);resize:vertical;min-height:80px;transition:border-color .15s;}
+.detail-textarea:focus{border-color:var(--primary);}
+.updates-section{margin-top:18px;padding-top:18px;border-top:1px solid var(--border);}
+.update-item{display:flex;gap:10px;margin-bottom:12px;}
+.update-body{background:var(--bg);border-radius:var(--radius);padding:10px 12px;flex:1;}
+.update-author{font-weight:700;margin-bottom:3px;font-size:12px;color:var(--text-muted);}
+.update-text{font-size:13.5px;color:var(--text);}
+.update-compose{display:flex;gap:10px;margin-top:10px;}
+.update-compose textarea{flex:1;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:14px;outline:none;resize:none;height:60px;transition:border-color .15s;}
+.update-compose textarea:focus{border-color:var(--primary);}
+
+/* ─ KANBAN ─ */
+.kanban-wrap{display:flex;gap:14px;padding-bottom:20px;}
+@media(max-width:768px){.kanban-wrap{flex-direction:column;gap:10px;}}
+.kc{width:280px;flex-shrink:0;}
+@media(max-width:768px){.kc{width:100%;}}
+.kcard{background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);padding:12px 14px;cursor:pointer;transition:box-shadow .15s;margin-bottom:8px;}
+.kcard:active{box-shadow:var(--shadow-md);}
+
+/* ─ MISC ─ */
+.color-dot-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.cdot{width:24px;height:24px;border-radius:50%;cursor:pointer;transition:transform .15s;}
+.cdot:hover{transform:scale(1.2);}
+.cdot.selected{outline:2.5px solid var(--text);outline-offset:2px;}
+.toast{position:fixed;bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 14px);left:50%;transform:translateX(-50%);background:#1a1f36;color:#fff;padding:10px 20px;border-radius:20px;font-size:13.5px;font-weight:600;z-index:999;box-shadow:var(--shadow-md);animation:toastIn .25s ease;white-space:nowrap;}
+@media(min-width:769px){.toast{bottom:22px;}}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeSidebar()"></div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">W</div>
+    <div class="logo-text">WorkBoard</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" placeholder="🔍 חיפוש לוחות..."/>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">ראשי</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+      <span class="nav-label">תיבת דואר</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.2 20c.4-2.2 3.5-4 6.8-4s6.4 1.8 6.8 4"/></svg>
+      <span class="nav-label">העבודה שלי</span>
+    </div>
+    <div class="section-title">המרחב שלי</div>
+    <div id="board-list"></div>
+    <div class="new-board-btn" onclick="openNewBoardModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>לוח חדש</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="avatar-sm" style="background:linear-gradient(135deg,#0073ea,#a25ddc)">ע</div>
+    <div class="workspace-name">עבודה שלי</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="btn-icon hide-mobile" onclick="toggleSidebarDesktop()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button class="btn-icon" id="mb-menu" style="display:none" onclick="openSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-title" id="board-title">טוען...</div>
+    <div class="topbar-actions">
+      <div class="search-box hide-mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="חיפוש..." id="search-input" oninput="filterRows()"/>
+      </div>
+      <button class="btn-icon" id="mb-search" style="display:none" onclick="toggleMobileSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="btn btn-secondary hide-mobile" onclick="openInviteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-1a6 6 0 0112 0v1"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+        הזמן
+      </button>
+      <button class="btn btn-primary hide-mobile" onclick="openAddItemModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        פריט חדש
+      </button>
+      <button class="btn-icon" id="mb-more" style="display:none" onclick="openMobileMoreMenu()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE SEARCH BAR -->
+  <div id="mobile-search-bar" style="display:none;padding:8px 12px;background:var(--white);border-bottom:1px solid var(--border)">
+    <div class="search-box" style="max-width:100%">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="חיפוש פריט..." id="search-mobile" oninput="filterRowsMobile(this.value)"/>
+    </div>
+  </div>
+
+  <!-- VIEW TABS -->
+  <div class="view-tabs">
+    <div class="view-tab active" id="tab-table" onclick="switchView('table')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      לוח
+    </div>
+    <div class="view-tab" id="tab-kanban" onclick="switchView('kanban')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="5" height="15"/></svg>
+      קנבן
+    </div>
+    <div class="view-tab" id="tab-chart" onclick="switchView('chart')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      תרשים
+    </div>
+    <div class="view-tab-add">+</div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="toolbar-btn hide-mobile" onclick="openAddItemModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>פריט חדש
+    </button>
+    <div class="toolbar-sep hide-mobile"></div>
+    <button class="toolbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>סנן
+    </button>
+    <button class="toolbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>מיין
+    </button>
+    <button class="toolbar-btn hide-mobile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M20.49 12H22M2 12h1.51"/></svg>קבץ
+    </button>
+    <div style="margin-right:auto;font-size:12px;color:var(--text-muted);white-space:nowrap" id="row-count-label"></div>
+    <button class="toolbar-btn" id="sel-actions" style="display:none;color:var(--red)" onclick="deleteSelected()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>מחק
+    </button>
+  </div>
+
+  <!-- BOARD -->
+  <div class="board-container" id="board-container"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bn-item active" onclick="bnClick(this,'home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    <span>ראשי</span>
+  </div>
+  <div class="bn-item" onclick="bnClick(this,'mywork')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.2 20c.4-2.2 3.5-4 6.8-4s6.4 1.8 6.8 4"/></svg>
+    <span>שלי</span>
+  </div>
+  <div class="bn-item" style="width:58px"></div>
+  <div class="bn-item" onclick="switchView('kanban');bnClick(this,'kanban')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="5" height="15"/></svg>
+    <span>קנבן</span>
+  </div>
+  <div class="bn-item" onclick="openSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <span>תפריט</span>
+  </div>
+</nav>
+
+<button class="fab" onclick="openAddItemModal()">+</button>
+
+<div id="dd-container"></div>
+<div id="modal-container"></div>
+
+<script>
+// ═══ DATA ═══
+const COLORS=['#0073ea','#a25ddc','#00c875','#fdab3d','#e44258','#03a9f4','#ff5ac4','#ffcb00','#1a1f36'];
+const PEOPLE=[
+  {name:'דנה כהן',color:'#0073ea',initials:'ד'},
+  {name:'אלון לוי',color:'#a25ddc',initials:'א'},
+  {name:'מיכל שחר',color:'#00c875',initials:'מ'},
+  {name:'רון גל',color:'#fdab3d',initials:'ר'},
+  {name:'שני בר',color:'#e44258',initials:'ש'},
+];
+const SL={'done':'הושלם','working':'בעבודה','stuck':'תקוע','not-started':'לא התחיל'};
+const PL={'critical':'קריטי','high':'גבוה','medium':'בינוני','low':'נמוך','none':'ללא'};
+const SC={'done':'#00c875','working':'#fdab3d','stuck':'#e44258','not-started':'#c4c4c4'};
+const PC={'critical':'#333','high':'#e44258','medium':'#fdab3d','low':'#579bfc','none':'#c4c4c4'};
+
+let data={
+  boards:[
+    {id:'b1',name:'השקת מוצר',color:'#0073ea',groups:[
+      {id:'g1',name:'בהכנה',color:'#0073ea',collapsed:false,items:[
+        {id:'i1',name:'עיצוב לוגו חדש',status:'working',priority:'high',date:'2024-12-20',person:[0,2],notes:'',updates:[],num:3},
+        {id:'i2',name:'כתיבת תוכן שיווקי',status:'not-started',priority:'medium',date:'2024-12-28',person:[1],notes:'',updates:[],num:0},
+        {id:'i3',name:'בניית אתר אינטרנט',status:'working',priority:'critical',date:'2025-01-05',person:[0,1,2],notes:'',updates:[],num:12},
+      ]},
+      {id:'g2',name:'בביצוע',color:'#00c875',collapsed:false,items:[
+        {id:'i4',name:'הכנת מצגת השקה',status:'done',priority:'high',date:'2024-12-15',person:[3],notes:'',updates:[],num:5},
+        {id:'i5',name:'רשימת לקוחות',status:'done',priority:'low',date:'2024-12-18',person:[4],notes:'',updates:[],num:8},
+        {id:'i6',name:'אסטרטגיית מדיה',status:'stuck',priority:'high',date:'2024-12-22',person:[2,3],notes:'',updates:[],num:2},
+      ]},
+      {id:'g3',name:'הושלם',color:'#a25ddc',collapsed:false,items:[
+        {id:'i7',name:'מחקר שוק ראשוני',status:'done',priority:'none',date:'2024-12-01',person:[1],notes:'',updates:[],num:100},
+        {id:'i8',name:'הגדרת קהל יעד',status:'done',priority:'none',date:'2024-12-05',person:[0],notes:'',updates:[],num:50},
+      ]},
+    ]},
+    {id:'b2',name:'פיתוח Q1',color:'#a25ddc',groups:[
+      {id:'g4',name:'ספרינט 1',color:'#a25ddc',collapsed:false,items:[
+        {id:'i9',name:'API בסיס',status:'done',priority:'critical',date:'2025-01-10',person:[0],notes:'',updates:[],num:20},
+        {id:'i10',name:'מסך התחברות',status:'working',priority:'high',date:'2025-01-15',person:[1,2],notes:'',updates:[],num:5},
+        {id:'i11',name:'דף ראשי',status:'not-started',priority:'medium',date:'2025-01-20',person:[3],notes:'',updates:[],num:0},
+      ]},
+    ]},
+    {id:'b3',name:'ניהול לקוחות',color:'#00c875',groups:[
+      {id:'g5',name:'לקוחות פעילים',color:'#00c875',collapsed:false,items:[
+        {id:'i12',name:'פגישה עם לקוח A',status:'done',priority:'high',date:'2024-12-19',person:[0,4],notes:'',updates:[],num:0},
+        {id:'i13',name:'הצעת מחיר B',status:'working',priority:'medium',date:'2024-12-25',person:[1],notes:'',updates:[],num:0},
+      ]},
+    ]},
+  ],
+  activeBoardId:'b1'
+};
+
+let activeView='table';
+let selectedRows=new Set();
+const isMob=()=>window.innerWidth<=768;
+
+// ═══ RESPONSIVE ═══
+function setupResp(){
+  const m=isMob();
+  ['mb-menu','mb-search','mb-more'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=m?'flex':'none';});
+}
+window.addEventListener('resize',()=>{setupResp();renderBoard();});
+
+// ═══ SIDEBAR ═══
+function openSidebar(){document.getElementById('sidebar').classList.add('drawer-open');document.getElementById('drawer-overlay').classList.add('visible');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('drawer-open');document.getElementById('drawer-overlay').classList.remove('visible');}
+function toggleSidebarDesktop(){document.getElementById('sidebar').classList.toggle('collapsed');}
+function bnClick(el,v){document.querySelectorAll('.bn-item').forEach(e=>e.classList.remove('active'));el.classList.add('active');}
+
+// ═══ SEARCH ═══
+function toggleMobileSearch(){
+  const b=document.getElementById('mobile-search-bar');
+  b.style.display=b.style.display==='none'?'block':'none';
+  if(b.style.display!=='none')document.getElementById('search-mobile')?.focus();
+}
+function filterRowsMobile(v){const i=document.getElementById('search-input');if(i)i.value=v;renderBoard();}
+function filterRows(){renderBoard();}
+
+// ═══ HELPERS ═══
+function getBoard(id){return data.boards.find(b=>b.id===(id||data.activeBoardId));}
+function getGroup(b,gid){return b.groups.find(g=>g.id===gid);}
+function getItem(b,iid){for(const g of b.groups){const it=g.items.find(i=>i.id===iid);if(it)return{item:it,group:g};}return null;}
+function uid(){return Math.random().toString(36).slice(2,9);}
+
+// ═══ RENDER SIDEBAR ═══
+function renderSidebar(){
+  document.getElementById('board-list').innerHTML=data.boards.map(b=>`
+    <div class="board-item ${b.id===data.activeBoardId?'active':''}" onclick="switchBoard('${b.id}')">
+      <div class="board-dot" style="background:${b.color}"></div>
+      <span class="board-name-text">${b.name}</span>
+    </div>`).join('');
+}
+
+// ═══ RENDER BOARD ═══
+function renderBoard(){
+  const board=getBoard();
+  document.getElementById('board-title').textContent=board.name;
+  renderSidebar();
+  if(activeView==='table')renderTableView();
+  else if(activeView==='kanban')renderKanbanView();
+  else renderChartView();
+  updateSelBar();updateCountLabel();
+}
+
+// ═══ TABLE VIEW ═══
+function renderTableView(){
+  const board=getBoard();
+  const search=(document.getElementById('search-input')?.value||'').toLowerCase();
+  const c=document.getElementById('board-container');
+
+  // DESKTOP
+  let d='<div class="board-table desktop-board">';
+  d+=`<div class="col-header-row" style="padding-right:36px">
+    <div class="col-header-item" style="padding-right:46px">שם פריט</div>
+    <div class="col-header-item fc">סטטוס</div>
+    <div class="col-header-item fc">עדיפות</div>
+    <div class="col-header-item fc">תאריך</div>
+    <div class="col-header-item fc">אחראי</div>
+    <div class="col-header-item" style="width:90px">מס׳</div>
+    <div class="col-header-item" style="width:38px"></div>
+  </div>`;
+
+  for(const g of board.groups){
+    const vis=g.items.filter(i=>!search||i.name.toLowerCase().includes(search));
+    const done=g.items.filter(i=>i.status==='done').length;
+    const pct=g.items.length?Math.round(done/g.items.length*100):0;
+    const totalN=g.items.reduce((s,i)=>s+i.num,0);
+    d+=`<div class="group-block ${g.collapsed?'collapsed':''}" id="grp-${g.id}">
+      <div class="group-header" onclick="toggleGroup('${g.id}')">
+        <div class="group-color-bar" style="background:${g.color}"></div>
+        <input class="group-title-input" value="${g.name}" onclick="event.stopPropagation()" onchange="renameGroup('${g.id}',this.value)" style="color:${g.color}"/>
+        <span class="group-count">${g.items.length} פריטים</span>
+        <div class="gcollapse-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+      <div class="group-table">`;
+    if(!vis.length&&search)d+=`<div style="padding:14px 20px;color:var(--text-muted);font-size:13px">אין תוצאות</div>`;
+    for(const item of vis){
+      const sel=selectedRows.has(item.id);
+      d+=`<div class="table-row ${sel?'selected':''}" id="row-${item.id}" draggable="true"
+          ondragstart="drgStart(event,'${item.id}','${g.id}')"
+          ondragover="drgOver(event)" ondrop="drgDrop(event,'${g.id}')" ondragleave="drgLeave(event)">
+        <div class="row-check"><input type="checkbox" ${sel?'checked':''} onchange="toggleSel('${item.id}')" onclick="event.stopPropagation()"/></div>
+        <div class="cell nc">
+          <input class="item-name-input" value="${item.name}" onchange="updItem('${item.id}','name',this.value)" onclick="openDetail('${item.id}')"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;color:var(--text-light);cursor:pointer;flex-shrink:0" onclick="openDetail('${item.id}')"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="cell fc" onclick="openStatusDD(event,'${item.id}')"><div class="sc sc-${item.status}">${SL[item.status]}</div></div>
+        <div class="cell fc" onclick="openPriorDD(event,'${item.id}')"><div class="pc pc-${item.priority}">${PL[item.priority]}</div></div>
+        <div class="cell fc"><input type="date" class="date-input" value="${item.date}" onchange="updItem('${item.id}','date',this.value)"/></div>
+        <div class="cell fc"><div class="person-cell">
+          ${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color}" title="${PEOPLE[pi].name}">${PEOPLE[pi].initials}</div>`).join('')}
+          <div class="avatar-add" onclick="openPersonDD(event,'${item.id}')">+</div>
+        </div></div>
+        <div class="cell" style="width:90px"><input class="num-input" type="number" value="${item.num}" onchange="updItem('${item.id}','num',+this.value)"/></div>
+        <div class="cell" style="width:38px;cursor:pointer;color:var(--text-muted)" onclick="openRowMenu(event,'${item.id}','${g.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </div>
+      </div>`;
+    }
+    d+=`<div class="summary-row">
+      <div style="width:36px"></div>
+      <div class="sum-cell nc"><div style="display:flex;align-items:center;gap:8px;width:200px"><div class="pb-wrap" style="width:70px"><div class="pb-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div></div>
+      <div class="sum-cell fc">${done}/${g.items.length}</div>
+      <div class="sum-cell fc"></div><div class="sum-cell fc"></div><div class="sum-cell fc"></div>
+      <div class="sum-cell" style="width:90px;text-align:center;font-weight:700">${totalN}</div>
+      <div style="width:38px"></div>
+    </div>`;
+    d+=`</div><div class="add-row" onclick="addToGroup('${g.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>הוסף פריט</div></div>`;
+  }
+  d+=`<button class="add-group-btn" onclick="openAddGroupModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>הוסף קבוצה</button></div>`;
+
+  // MOBILE
+  let m='<div class="mobile-board">';
+  for(const g of board.groups){
+    const vis=g.items.filter(i=>!search||i.name.toLowerCase().includes(search));
+    m+=`<div class="mg-block ${g.collapsed?'collapsed':''}" id="mgrp-${g.id}">
+      <div class="mg-header" onclick="toggleGroup('${g.id}')">
+        <div class="mg-bar" style="background:${g.color}"></div>
+        <span class="mg-name" style="color:${g.color}">${g.name}</span>
+        <span class="mg-count">${g.items.length}</span>
+        <div class="mg-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+      <div class="mg-cards">`;
+    for(const item of vis){
+      const sel=selectedRows.has(item.id);
+      m+=`<div class="mc ${sel?'selected':''}" id="mrow-${item.id}">
+        <div class="mc-top">
+          <div class="mc-check"><input type="checkbox" ${sel?'checked':''} onchange="toggleSel('${item.id}')" onclick="event.stopPropagation()"/></div>
+          <div class="mc-name" onclick="openDetail('${item.id}')">${item.name}</div>
+          <div class="mc-menu" onclick="openRowMenu(event,'${item.id}','${g.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+        </div>
+        <div class="mc-badges">
+          <span class="mc-badge" style="background:${SC[item.status]}" onclick="openStatusDD(event,'${item.id}')">${SL[item.status]}</span>
+          <span class="mc-badge" style="background:${PC[item.priority]}" onclick="openPriorDD(event,'${item.id}')">${PL[item.priority]}</span>
+        </div>
+        <div class="mc-footer">
+          <div class="mc-date">${item.date?'📅 '+item.date:''}</div>
+          <div class="mc-people">${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color};width:24px;height:24px;font-size:9px">${PEOPLE[pi].initials}</div>`).join('')}</div>
+        </div>
+      </div>`;
+    }
+    m+=`<div class="mc-add" onclick="addToGroup('${g.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>הוסף פריט</div>
+      </div></div>`;
+  }
+  m+=`<button class="add-group-btn" onclick="openAddGroupModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>הוסף קבוצה</button></div>`;
+
+  c.innerHTML=d+m;
+}
+
+// ═══ KANBAN ═══
+function renderKanbanView(){
+  const board=getBoard();
+  const all=[];
+  for(const g of board.groups)for(const i of g.items)all.push({...i,gname:g.name});
+  let h='<div class="kanban-wrap">';
+  for(const st of['not-started','working','stuck','done']){
+    const items=all.filter(i=>i.status===st);
+    h+=`<div class="kc">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${SC[st]}"></div>
+        <span style="font-weight:700;font-size:14px">${SL[st]}</span>
+        <span style="background:var(--border);border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600">${items.length}</span>
+      </div>`;
+    for(const item of items){
+      h+=`<div class="kcard" onclick="openDetail('${item.id}')">
+        <div style="font-weight:600;font-size:13.5px;margin-bottom:8px">${item.name}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span style="background:${PC[item.priority]};color:#fff;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">${PL[item.priority]}</span>
+          <div style="display:flex;gap:2px">${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color};width:22px;height:22px;font-size:9px">${PEOPLE[pi].initials}</div>`).join('')}</div>
+        </div>
+        ${item.date?`<div style="font-size:11px;color:var(--text-muted)">📅 ${item.date}</div>`:''}
+      </div>`;
+    }
+    h+=`<div style="border:1.5px dashed var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;color:var(--text-muted);font-size:13px"
+      ontouchstart="this.style.background='var(--primary-light)'" ontouchend="this.style.background=''"
+      onmouseover="this.style.background='var(--primary-light)';this.style.color='var(--primary)'"
+      onmouseout="this.style.background='';this.style.color='var(--text-muted)'"
+      onclick="addKanban('${st}')">+ הוסף פריט</div></div>`;
+  }
+  h+='</div>';
+  document.getElementById('board-container').innerHTML=h;
+}
+
+// ═══ CHART ═══
+function renderChartView(){
+  const board=getBoard();
+  const all=[];
+  for(const g of board.groups)for(const i of g.items)all.push(i);
+  const sc={done:0,working:0,stuck:0,'not-started':0};
+  const pc={critical:0,high:0,medium:0,low:0,none:0};
+  for(const i of all){sc[i.status]=(sc[i.status]||0)+1;pc[i.priority]=(pc[i.priority]||0)+1;}
+  const m1=Math.max(...Object.values(sc),1),m2=Math.max(...Object.values(pc),1);
+  const bars=(counts,labels,colors,max)=>Object.entries(counts).map(([k,v])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:80px;font-size:12px;font-weight:600;color:var(--text-muted)">${labels[k]}</div>
+      <div style="flex:1;background:var(--border);border-radius:4px;height:32px;overflow:hidden;min-width:0">
+        <div style="height:100%;width:${Math.round(v/max*100)}%;background:${colors[k]};display:flex;align-items:center;justify-content:flex-end;padding:0 8px;min-width:${v?32:0}px;transition:width .5s">
+          <span style="color:#fff;font-size:12px;font-weight:700">${v}</span>
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('board-container').innerHTML=`<div style="max-width:660px">
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px;border:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">לפי סטטוס</div>${bars(sc,SL,SC,m1)}</div>
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px;border:1px solid var(--border)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">לפי עדיפות</div>${bars(pc,PL,PC,m2)}</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      ${[{l:'סה"כ',v:all.length,c:'#0073ea'},{l:'הושלמו',v:sc.done,c:'#00c875'},{l:'בעבודה',v:sc.working,c:'#fdab3d'},{l:'תקועים',v:sc.stuck,c:'#e44258'}]
+        .map(s=>`<div style="background:var(--white);border-radius:var(--radius);padding:16px;border:1px solid var(--border);text-align:center">
+          <div style="font-size:30px;font-weight:800;color:${s.c}">${s.v}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:600">${s.l}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ═══ ACTIONS ═══
+function switchBoard(id){data.activeBoardId=id;selectedRows.clear();closeSidebar();renderBoard();}
+function switchView(v){
+  activeView=v;
+  document.querySelectorAll('.view-tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+v)?.classList.add('active');
+  renderBoard();
+}
+function toggleGroup(gid){
+  const g=getGroup(getBoard(),gid);if(g)g.collapsed=!g.collapsed;
+  document.getElementById('grp-'+gid)?.classList.toggle('collapsed');
+  document.getElementById('mgrp-'+gid)?.classList.toggle('collapsed');
+}
+function renameGroup(gid,name){const g=getGroup(getBoard(),gid);if(g)g.name=name;}
+function updItem(iid,f,v){const r=getItem(getBoard(),iid);if(r){r.item[f]=v;renderBoard();}}
+function toggleSel(iid){
+  if(selectedRows.has(iid))selectedRows.delete(iid);else selectedRows.add(iid);
+  updateSelBar();
+  document.getElementById('row-'+iid)?.classList.toggle('selected',selectedRows.has(iid));
+  document.getElementById('mrow-'+iid)?.classList.toggle('selected',selectedRows.has(iid));
+}
+function updateSelBar(){const b=document.getElementById('sel-actions');if(b)b.style.display=selectedRows.size?'':'none';}
+function updateCountLabel(){
+  const t=getBoard().groups.reduce((s,g)=>s+g.items.length,0);
+  const el=document.getElementById('row-count-label');if(el)el.textContent=t+' פריטים';
+}
+function deleteSelected(){
+  const b=getBoard();for(const g of b.groups)g.items=g.items.filter(i=>!selectedRows.has(i.id));
+  selectedRows.clear();renderBoard();showToast('פריטים נמחקו');
+}
+
+// drag & drop
+let drgId=null,drgGid=null;
+function drgStart(e,iid,gid){drgId=iid;drgGid=gid;setTimeout(()=>document.getElementById('row-'+iid)?.classList.add('dragging'),0);}
+function drgOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over');}
+function drgLeave(e){e.currentTarget.classList.remove('drag-over');}
+function drgDrop(e,gid){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(!drgId||!drgGid)return;
+  const b=getBoard(),sg=getGroup(b,drgGid),dg=getGroup(b,gid);if(!sg||!dg)return;
+  const idx=sg.items.findIndex(i=>i.id===drgId);if(idx===-1)return;
+  const[it]=sg.items.splice(idx,1);dg.items.push(it);drgId=null;drgGid=null;renderBoard();
+}
+
+// ═══ DROPDOWNS ═══
+function closeDD(){document.getElementById('dd-container').innerHTML='';}
+function openDD(x,y,items){
+  closeDD();
+  const c=document.getElementById('dd-container');
+  const ov=document.createElement('div');ov.className='dd-overlay';ov.onclick=closeDD;
+  const menu=document.createElement('div');menu.className='dd-menu';
+  if(!isMob()){menu.style.top=Math.min(y,window.innerHeight-280)+'px';menu.style.right=(window.innerWidth-x)+'px';}
+  menu.innerHTML=items.map(it=>`<div class="dd-item" onclick="${it.a}">${it.dot?`<div class="dd-dot" style="background:${it.dot}"></div>`:''}${it.l}</div>`).join('');
+  c.appendChild(ov);c.appendChild(menu);
+}
+function openStatusDD(e,iid){
+  e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
+  openDD(r.right,r.bottom+4,[
+    {l:'הושלם',dot:'#00c875',a:`updItem('${iid}','status','done');closeDD()`},
+    {l:'בעבודה',dot:'#fdab3d',a:`updItem('${iid}','status','working');closeDD()`},
+    {l:'תקוע',dot:'#e44258',a:`updItem('${iid}','status','stuck');closeDD()`},
+    {l:'לא התחיל',dot:'#c4c4c4',a:`updItem('${iid}','status','not-started');closeDD()`},
+  ]);
+}
+function openPriorDD(e,iid){
+  e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
+  openDD(r.right,r.bottom+4,[
+    {l:'קריטי',dot:'#333',a:`updItem('${iid}','priority','critical');closeDD()`},
+    {l:'גבוה',dot:'#e44258',a:`updItem('${iid}','priority','high');closeDD()`},
+    {l:'בינוני',dot:'#fdab3d',a:`updItem('${iid}','priority','medium');closeDD()`},
+    {l:'נמוך',dot:'#579bfc',a:`updItem('${iid}','priority','low');closeDD()`},
+    {l:'ללא',dot:'#c4c4c4',a:`updItem('${iid}','priority','none');closeDD()`},
+  ]);
+}
+function openPersonDD(e,iid){
+  e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
+  openDD(r.right,r.bottom+4,PEOPLE.map((p,pi)=>({l:p.name,dot:p.color,a:`togPerson('${iid}',${pi});closeDD()`})));
+}
+function openRowMenu(e,iid,gid){
+  e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();
+  openDD(r.right,r.bottom+4,[
+    {l:'פתח פריט',a:`closeDD();openDetail('${iid}')`},
+    {l:'שכפל',a:`closeDD();dupItem('${iid}','${gid}')`},
+    {l:'🗑 מחק',a:`closeDD();delItem('${iid}','${gid}')`},
+  ]);
+}
+function openMobileMoreMenu(){
+  openDD(0,0,[
+    {l:'➕ פריט חדש',a:`closeDD();openAddItemModal()`},
+    {l:'👥 הזמן צוות',a:`closeDD();openInviteModal()`},
+    {l:'📊 תרשים',a:`closeDD();switchView('chart')`},
+  ]);
+}
+function togPerson(iid,pi){
+  const r=getItem(getBoard(),iid);if(!r)return;
+  const a=r.item.person,idx=a.indexOf(pi);
+  if(idx===-1)a.push(pi);else a.splice(idx,1);
+  renderBoard();
+}
+function dupItem(iid,gid){
+  const b=getBoard(),g=getGroup(b,gid);if(!g)return;
+  const idx=g.items.findIndex(i=>i.id===iid);if(idx===-1)return;
+  const copy={...g.items[idx],id:uid(),name:g.items[idx].name+' (עותק)',person:[...g.items[idx].person]};
+  g.items.splice(idx+1,0,copy);renderBoard();showToast('פריט שוכפל');
+}
+function delItem(iid,gid){
+  const g=getGroup(getBoard(),gid);if(!g)return;
+  g.items=g.items.filter(i=>i.id!==iid);renderBoard();showToast('פריט נמחק');
+}
+
+// ═══ MODALS ═══
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+function openModal(html){document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;}
+
+function openNewBoardModal(){
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title">לוח חדש</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="nb-name" placeholder="שם הלוח" autofocus/>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">ביטול</button><button class="btn btn-primary" onclick="createBoard()">צור לוח</button></div>
+  </div>`);
+  setTimeout(()=>document.getElementById('nb-name')?.focus(),80);
+}
+function createBoard(){
+  const name=document.getElementById('nb-name')?.value.trim();if(!name)return;
+  const id='b'+uid(),color=COLORS[Math.floor(Math.random()*COLORS.length)];
+  data.boards.push({id,name,color,groups:[{id:'g'+uid(),name:'קבוצה ראשונה',color,collapsed:false,items:[]}]});
+  data.activeBoardId=id;closeModal();renderBoard();showToast('לוח נוצר!');
+}
+function openAddItemModal(){
+  const board=getBoard();
+  const opts=board.groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title">פריט חדש</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="ni-name" placeholder="שם הפריט" autofocus/>
+    <select class="modal-input" id="ni-group" style="cursor:pointer">${opts}</select>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">ביטול</button><button class="btn btn-primary" onclick="createItem()">הוסף</button></div>
+  </div>`);
+  setTimeout(()=>document.getElementById('ni-name')?.focus(),80);
+}
+function createItem(){
+  const name=document.getElementById('ni-name')?.value.trim();
+  const gid=document.getElementById('ni-group')?.value;
+  if(!name||!gid)return;
+  const g=getGroup(getBoard(),gid);
+  if(g)g.items.push({id:uid(),name,status:'not-started',priority:'none',date:'',person:[],notes:'',updates:[],num:0});
+  closeModal();renderBoard();showToast('פריט נוסף!');
+}
+function addToGroup(gid){
+  const g=getGroup(getBoard(),gid);if(!g)return;
+  const id=uid();
+  g.items.push({id,name:'פריט חדש',status:'not-started',priority:'none',date:'',person:[],notes:'',updates:[],num:0});
+  renderBoard();
+  setTimeout(()=>{
+    const inp=document.querySelector(`#row-${id} .item-name-input`);
+    if(inp){inp.focus();inp.select();}
+  },60);
+}
+function addKanban(status){
+  const b=getBoard();if(!b.groups.length)return;
+  b.groups[0].items.push({id:uid(),name:'פריט חדש',status,priority:'none',date:'',person:[],notes:'',updates:[],num:0});
+  renderBoard();
+}
+function openAddGroupModal(){
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title">קבוצה חדשה</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="ng-name" placeholder="שם הקבוצה" autofocus/>
+    <div class="color-dot-picker">${COLORS.map((c,i)=>`<div class="cdot ${i===0?'selected':''}" style="background:${c}" onclick="selColor('${c}',this)"></div>`).join('')}</div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">ביטול</button><button class="btn btn-primary" onclick="createGroup()">צור קבוצה</button></div>
+  </div>`);
+  setTimeout(()=>document.getElementById('ng-name')?.focus(),80);
+}
+let ngColor=COLORS[0];
+function selColor(c,el){ngColor=c;document.querySelectorAll('.cdot').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');}
+function createGroup(){
+  const name=document.getElementById('ng-name')?.value.trim();if(!name)return;
+  getBoard().groups.push({id:'g'+uid(),name,color:ngColor||COLORS[0],collapsed:false,items:[]});
+  closeModal();renderBoard();showToast('קבוצה נוצרה!');
+}
+function openInviteModal(){
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title">הזמן משתמשים</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" type="email" placeholder="כתובת אימייל" autofocus/>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">חברי הצוות:</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      ${PEOPLE.map(p=>`<div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="background:${p.color};width:34px;height:34px;font-size:13px">${p.initials}</div>
+        <div style="font-size:14px;font-weight:500">${p.name}</div>
+        <div style="margin-right:auto;font-size:12px;background:var(--bg);padding:3px 10px;border-radius:10px;color:var(--text-muted)">חבר</div>
+      </div>`).join('')}
+    </div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">סגור</button><button class="btn btn-primary" onclick="showToast('הזמנה נשלחה!');closeModal()">שלח הזמנה</button></div>
+  </div>`);
+}
+
+// ═══ ITEM DETAIL ═══
+function openDetail(iid){
+  const b=getBoard(),r=getItem(b,iid);if(!r)return;
+  const item=r.item;
+  document.getElementById('modal-container').innerHTML=`<div class="detail-overlay" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-panel" onclick="event.stopPropagation()">
+      <div class="detail-handle"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text-muted)">📋 ${r.group.name}</div>
+        <div class="modal-close" onclick="closeDetail()">×</div>
+      </div>
+      <input class="detail-title" value="${item.name}" onchange="updItem('${iid}','name',this.value)"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <div class="detail-label">סטטוס</div>
+          <div class="sc sc-${item.status}" style="cursor:pointer;display:inline-flex" onclick="cycleStatus('${iid}')">${SL[item.status]}</div>
+        </div>
+        <div>
+          <div class="detail-label">עדיפות</div>
+          <div class="pc pc-${item.priority}" style="cursor:pointer;display:inline-flex" onclick="cyclePriority('${iid}')">${PL[item.priority]}</div>
+        </div>
+        <div>
+          <div class="detail-label">תאריך יעד</div>
+          <input type="date" class="modal-input" style="margin-bottom:0;padding:8px 10px;font-size:14px" value="${item.date}" onchange="updItem('${iid}','date',this.value)"/>
+        </div>
+        <div>
+          <div class="detail-label">אחראי</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px">
+            ${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color};width:30px;height:30px;font-size:11px">${PEOPLE[pi].initials}</div>`).join('')}
+            ${PEOPLE.filter((_,pi)=>!item.person.includes(pi)).map((_,pi)=>`<div class="avatar-add" style="width:30px;height:30px" onclick="addPerson('${iid}',${pi})">+</div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="detail-label">תיאור</div>
+        <textarea class="detail-textarea" placeholder="הוסף תיאור..." onchange="updItem('${iid}','notes',this.value)">${item.notes||''}</textarea>
+      </div>
+      <div class="updates-section">
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px">עדכונים</div>
+        <div id="upd-list-${iid}">
+          ${(item.updates||[]).map(u=>`<div class="update-item">
+            <div class="avatar" style="background:${PEOPLE[0].color};width:28px;height:28px;font-size:10px;flex-shrink:0">${PEOPLE[0].initials}</div>
+            <div class="update-body"><div class="update-author">${u.author} • ${u.time}</div><div class="update-text">${u.text}</div></div>
+          </div>`).join('')}
+        </div>
+        <div class="update-compose">
+          <div class="avatar" style="background:${PEOPLE[0].color};width:28px;height:28px;font-size:10px;flex-shrink:0">${PEOPLE[0].initials}</div>
+          <div style="flex:1">
+            <textarea id="upd-ta-${iid}" placeholder="כתוב עדכון..."></textarea>
+            <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="addUpdate('${iid}')">שלח עדכון</button>
+          </div>
+        </div>
+      </div>
+    </div></div>`;
+}
+function closeDetail(){document.getElementById('modal-container').innerHTML='';renderBoard();}
+function addPerson(iid,pi){togPerson(iid,pi);openDetail(iid);}
+function addUpdate(iid){
+  const b=getBoard(),r=getItem(b,iid);
+  const ta=document.getElementById('upd-ta-'+iid);
+  if(!r||!ta||!ta.value.trim())return;
+  if(!r.item.updates)r.item.updates=[];
+  r.item.updates.push({author:'אתה',time:'עכשיו',text:ta.value.trim()});
+  ta.value='';
+  const list=document.getElementById('upd-list-'+iid);
+  if(list)list.innerHTML=r.item.updates.map(u=>`<div class="update-item">
+    <div class="avatar" style="background:${PEOPLE[0].color};width:28px;height:28px;font-size:10px;flex-shrink:0">${PEOPLE[0].initials}</div>
+    <div class="update-body"><div class="update-author">${u.author} • ${u.time}</div><div class="update-text">${u.text}</div></div>
+  </div>`).join('');
+}
+function cycleStatus(iid){
+  const st=['not-started','working','stuck','done'];
+  const r=getItem(getBoard(),iid);if(!r)return;
+  r.item.status=st[(st.indexOf(r.item.status)+1)%st.length];
+  openDetail(iid);
+}
+function cyclePriority(iid){
+  const pr=['none','low','medium','high','critical'];
+  const r=getItem(getBoard(),iid);if(!r)return;
+  r.item.priority=pr[(pr.indexOf(r.item.priority)+1)%pr.length];
+  openDetail(iid);
+}
+
+// ═══ TOAST ═══
+function showToast(msg){
+  document.querySelector('.toast')?.remove();
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+}
+
+// ═══ INIT ═══
+setupResp();
+renderBoard();
+</script>
+</body>
+</html>
