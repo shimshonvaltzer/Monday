@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WorkBoard — Monday Clone</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --sidebar-bg: #1a1f36;
+    --sidebar-hover: #252b47;
+    --sidebar-active: #2e3558;
+    --sidebar-text: #c4c9e2;
+    --sidebar-text-muted: #6b7280;
+    --white: #ffffff;
+    --border: #e2e5f0;
+    --border-light: #f0f2fa;
+    --text: #1a1f36;
+    --text-muted: #6e7592;
+    --text-light: #9da3bd;
+    --primary: #0073ea;
+    --primary-hover: #0060c0;
+    --primary-light: #e8f2ff;
+    --red: #e44258;
+    --green: #00c875;
+    --orange: #fdab3d;
+    --purple: #a25ddc;
+    --teal: #03a9f4;
+    --pink: #ff5ac4;
+    --yellow: #ffcb00;
+    --gray: #c4c4c4;
+    --done: #00c875;
+    --working: #fdab3d;
+    --stuck: #e44258;
+    --not-started: #c4c4c4;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.14);
+    --radius: 8px;
+    --radius-sm: 4px;
+    --radius-lg: 12px;
+    --topbar-h: 52px;
+    --sidebar-w: 240px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Figtree', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w); background: var(--sidebar-bg); display: flex; flex-direction: column;
+    height: 100vh; flex-shrink: 0; overflow: hidden;
+    transition: width .22s ease;
+    z-index: 100;
+  }
+  .sidebar.collapsed { width: 56px; }
+  .sidebar-logo {
+    height: var(--topbar-h); display: flex; align-items: center; padding: 0 14px;
+    border-bottom: 1px solid rgba(255,255,255,.07); gap: 10px; flex-shrink: 0;
+  }
+  .logo-icon {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #0073ea 0%, #a25ddc 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #fff; font-size: 13px; letter-spacing: -.5px;
+  }
+  .logo-text { color: #fff; font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; }
+  .sidebar.collapsed .logo-text,
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .section-title,
+  .sidebar.collapsed .board-name-text,
+  .sidebar.collapsed .new-board-btn span,
+  .sidebar.collapsed .workspace-name { display: none; }
+
+  .sidebar-search {
+    padding: 10px 10px 6px;
+    flex-shrink: 0;
+  }
+  .sidebar.collapsed .sidebar-search { display: none; }
+  .sidebar-search input {
+    width: 100%; background: rgba(255,255,255,.1); border: none; border-radius: var(--radius-sm);
+    color: var(--sidebar-text); font-size: 13px; padding: 6px 10px;
+    outline: none; font-family: inherit;
+  }
+  .sidebar-search input::placeholder { color: rgba(196,201,226,.5); }
+
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .sidebar-nav::-webkit-scrollbar { width: 4px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 14px;
+    color: var(--sidebar-text); cursor: pointer; border-radius: 6px; margin: 1px 6px;
+    transition: background .15s; white-space: nowrap; position: relative;
+    font-size: 13.5px; font-weight: 500;
+  }
+  .nav-item:hover { background: var(--sidebar-hover); }
+  .nav-item.active { background: var(--sidebar-active); color: #fff; }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 10px; margin: 2px 6px; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--sidebar-text-muted); padding: 16px 20px 4px; white-space: nowrap;
+  }
+
+  .board-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+    color: var(--sidebar-text); cursor: pointer; border-radius: 6px; margin: 1px 6px;
+    transition: background .15s; white-space: nowrap; font-size: 13px;
+  }
+  .board-item:hover { background: var(--sidebar-hover); }
+  .board-item.active { background: var(--sidebar-active); color: #fff; }
+  .board-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .board-name-text { overflow: hidden; text-overflow: ellipsis; }
+  .sidebar.collapsed .board-item { justify-content: center; padding: 8px; }
+
+  .new-board-btn {
+    display: flex; align-items: center; gap: 8px; padding: 7px 14px;
+    color: rgba(196,201,226,.6); cursor: pointer; font-size: 12.5px;
+    margin: 2px 6px; border-radius: 6px; transition: all .15s;
+  }
+  .new-board-btn:hover { background: var(--sidebar-hover); color: var(--sidebar-text); }
+  .sidebar.collapsed .new-board-btn { justify-content: center; padding: 8px; }
+
+  .sidebar-footer {
+    border-top: 1px solid rgba(255,255,255,.07); padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  }
+  .avatar-sm {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+  }
+  .workspace-name { color: var(--sidebar-text); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+  /* ─── MAIN ─── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ─── TOP BAR ─── */
+  .topbar {
+    height: var(--topbar-h); background: var(--white); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;
+    z-index: 50;
+  }
+  .topbar-title { font-size: 18px; font-weight: 700; flex: 1; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+    border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 600;
+    cursor: pointer; border: none; font-family: inherit; transition: all .15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-secondary { background: transparent; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-secondary:hover { background: var(--border-light); }
+  .btn svg { width: 16px; height: 16px; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 5px 10px;
+    min-width: 200px;
+  }
+  .search-box svg { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
+  .search-box input { border: none; background: transparent; font-family: inherit; font-size: 13px; outline: none; color: var(--text); width: 100%; }
+
+  /* ─── VIEW TABS ─── */
+  .view-tabs {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 20px; gap: 0; flex-shrink: 0;
+  }
+  .view-tab {
+    padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    color: var(--text-muted); border-bottom: 2.5px solid transparent; transition: all .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .view-tab:hover { color: var(--text); }
+  .view-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .view-tab svg { width: 15px; height: 15px; }
+  .view-tab-add {
+    padding: 8px 12px; color: var(--text-muted); cursor: pointer; font-size: 20px;
+    transition: color .15s; line-height: 1;
+  }
+  .view-tab-add:hover { color: var(--primary); }
+
+  /* ─── TOOLBAR ─── */
+  .toolbar {
+    background: var(--white); padding: 8px 20px;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    gap: 8px; flex-shrink: 0;
+  }
+  .toolbar-btn {
+    display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+    border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-muted);
+    cursor: pointer; font-weight: 500; transition: all .15s; border: none;
+    background: transparent; font-family: inherit;
+  }
+  .toolbar-btn:hover { background: var(--bg); color: var(--text); }
+  .toolbar-btn svg { width: 15px; height: 15px; }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
+  /* ─── BOARD ─── */
+  .board-container { flex: 1; overflow: auto; padding: 20px; }
+  .board-container::-webkit-scrollbar { width: 8px; height: 8px; }
+  .board-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ─── TABLE ─── */
+  .board-table { min-width: 900px; }
+  
+  /* Column header row */
+  .col-header-row {
+    display: flex; align-items: center; margin-bottom: 0;
+    padding-right: 36px; /* for collapse arrow */
+  }
+  .col-header-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .5px;
+    padding: 6px 10px; cursor: pointer; white-space: nowrap;
+    user-select: none;
+  }
+  .col-header-item:first-child { flex: 1; min-width: 220px; }
+  .col-header-item.fixed-col { width: 150px; flex-shrink: 0; }
+  .col-header-item svg { width: 13px; height: 13px; }
+
+  /* Group */
+  .group-block { margin-bottom: 24px; border-radius: var(--radius-lg); overflow: visible; }
+  
+  .group-header {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    cursor: pointer; user-select: none;
+    background: var(--white); border-radius: var(--radius) var(--radius) 0 0;
+    border: 1px solid var(--border); border-bottom: none;
+  }
+  .group-color-bar { width: 6px; height: 24px; border-radius: 3px; flex-shrink: 0; }
+  .group-title-input {
+    border: none; background: transparent; font-family: inherit;
+    font-size: 14px; font-weight: 700; color: var(--text); outline: none;
+    flex: 1;
+  }
+  .group-title-input:focus { background: var(--primary-light); border-radius: 4px; padding: 2px 6px; }
+  .group-count { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .group-collapse-btn {
+    width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center;
+    justify-content: center; color: var(--text-muted); cursor: pointer;
+    transition: all .15s;
+  }
+  .group-collapse-btn:hover { background: var(--bg); }
+  .group-collapse-btn svg { width: 14px; height: 14px; transition: transform .2s; }
+  .group-block.collapsed .group-collapse-btn svg { transform: rotate(-90deg); }
+
+  /* Table body */
+  .group-table { border: 1px solid var(--border); border-top: none; background: var(--white); border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; }
+  .group-block.collapsed .group-table { display: none; }
+
+  .table-row {
+    display: flex; align-items: center; border-bottom: 1px solid var(--border-light);
+    transition: background .1s; position: relative;
+  }
+  .table-row:last-of-type { border-bottom: none; }
+  .table-row:hover { background: var(--primary-light); }
+  .table-row.dragging { opacity: .5; }
+  .table-row.drag-over { border-top: 2px solid var(--primary); }
+
+  .row-check {
+    width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    padding: 0 4px;
+  }
+  .row-check input[type=checkbox] { accent-color: var(--primary); cursor: pointer; width: 14px; height: 14px; }
+  
+  .row-drag-handle {
+    position: absolute; left: -18px; top: 50%; transform: translateY(-50%);
+    color: var(--text-light); cursor: grab; opacity: 0; transition: opacity .15s;
+    display: flex; align-items: center;
+  }
+  .table-row:hover .row-drag-handle { opacity: 1; }
+  .row-drag-handle svg { width: 14px; height: 14px; }
+
+  .cell {
+    padding: 8px 10px; display: flex; align-items: center; min-height: 40px;
+    border-right: 1px solid var(--border-light); position: relative;
+  }
+  .cell:last-child { border-right: none; }
+  .cell.name-cell { flex: 1; min-width: 220px; gap: 8px; font-weight: 500; }
+  .cell.fixed-col { width: 150px; flex-shrink: 0; }
+
+  .item-name-input {
+    border: none; background: transparent; font-family: inherit;
+    font-size: 13.5px; font-weight: 500; color: var(--text); outline: none;
+    flex: 1; cursor: pointer;
+  }
+  .item-name-input:focus { cursor: text; }
+
+  /* Status cell */
+  .status-cell {
+    width: 100%; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px; font-weight: 700;
+    cursor: pointer; text-align: center; min-height: 28px; transition: filter .15s; white-space: nowrap;
+  }
+  .status-cell:hover { filter: brightness(.95); }
+  .status-done { background: var(--done); color: #fff; }
+  .status-working { background: var(--working); color: #fff; }
+  .status-stuck { background: var(--stuck); color: #fff; }
+  .status-not-started { background: var(--not-started); color: #fff; }
+
+  /* Priority cell */
+  .priority-cell {
+    width: 100%; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px; font-weight: 700;
+    cursor: pointer; min-height: 28px; white-space: nowrap;
+  }
+  .priority-critical { background: #333; color: #fff; }
+  .priority-high { background: #e44258; color: #fff; }
+  .priority-medium { background: #fdab3d; color: #fff; }
+  .priority-low { background: #579bfc; color: #fff; }
+  .priority-none { background: var(--gray); color: #fff; }
+
+  /* Date cell */
+  .date-input {
+    border: none; background: transparent; font-family: inherit; font-size: 13px;
+    color: var(--text); outline: none; cursor: pointer; width: 100%;
+  }
+
+  /* Person cell */
+  .person-cell { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; font-weight: 700; color: #fff;
+    cursor: pointer; flex-shrink: 0; border: 2px solid #fff;
+    transition: transform .15s;
+  }
+  .avatar:hover { transform: scale(1.15); z-index: 2; }
+  .avatar-add {
+    width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); cursor: pointer; font-size: 14px;
+    transition: all .15s;
+  }
+  .avatar-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+  /* Numbers cell */
+  .num-input {
+    border: none; background: transparent; font-family: inherit; font-size: 13px;
+    color: var(--text); text-align: center; outline: none; width: 100%;
+  }
+
+  /* Add row */
+  .add-row {
+    display: flex; align-items: center; gap: 8px; padding: 8px 46px;
+    color: var(--text-muted); cursor: pointer; border-top: 1px solid var(--border-light);
+    font-size: 13px; font-weight: 500; transition: background .1s;
+    background: var(--white);
+  }
+  .add-row:hover { background: var(--primary-light); color: var(--primary); }
+  .add-row svg { width: 15px; height: 15px; }
+
+  /* Group summary row */
+  .summary-row {
+    display: flex; align-items: center; border-top: 1px solid var(--border);
+    padding: 6px 0; background: rgba(0,0,0,.02);
+  }
+  .summary-cell { padding: 4px 10px; }
+  .summary-cell.name-cell { flex: 1; min-width: 220px; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+  .summary-cell.fixed-col { width: 150px; flex-shrink: 0; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+  /* Add group */
+  .add-group-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+    border-radius: var(--radius); font-size: 13.5px; font-weight: 600;
+    color: var(--primary); cursor: pointer; border: 1.5px dashed var(--primary);
+    background: transparent; transition: all .15s; font-family: inherit;
+    margin-top: 8px;
+  }
+  .add-group-btn:hover { background: var(--primary-light); }
+  .add-group-btn svg { width: 16px; height: 16px; }
+
+  /* ─── DROPDOWN ─── */
+  .dropdown-overlay {
+    position: fixed; inset: 0; z-index: 200;
+  }
+  .dropdown-menu {
+    position: fixed; background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-lg); z-index: 201; min-width: 160px;
+    overflow: hidden; animation: fadeIn .1s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .dropdown-item {
+    padding: 8px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: background .1s;
+  }
+  .dropdown-item:hover { background: var(--bg); }
+  .dropdown-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 300;
+    display: flex; align-items: center; justify-content: center; animation: fadeIn .15s;
+  }
+  .modal {
+    background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    width: 520px; max-width: 95vw; max-height: 90vh; overflow: auto; padding: 28px;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-title { font-size: 18px; font-weight: 700; }
+  .modal-close { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); font-size: 18px; transition: background .15s; }
+  .modal-close:hover { background: var(--bg); }
+  .modal-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: inherit; font-size: 14px; outline: none; color: var(--text);
+    transition: border-color .15s; margin-bottom: 16px;
+  }
+  .modal-input:focus { border-color: var(--primary); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ─── ITEM DETAIL ─── */
+  .item-detail-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 300;
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    animation: fadeIn .15s;
+  }
+  .item-detail-panel {
+    width: 600px; max-width: 95vw; height: 100vh; background: var(--white);
+    box-shadow: var(--shadow-lg); overflow: auto; padding: 28px;
+    animation: slideLeft .2s ease;
+  }
+  @keyframes slideLeft { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .detail-title-input {
+    border: none; background: transparent; font-family: inherit; font-size: 22px;
+    font-weight: 800; color: var(--text); outline: none; width: 100%; margin-bottom: 20px;
+  }
+  .detail-field { margin-bottom: 16px; }
+  .detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); margin-bottom: 6px; }
+  .detail-value { font-size: 14px; font-weight: 500; }
+  .detail-textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: inherit; font-size: 14px; outline: none; color: var(--text);
+    resize: vertical; min-height: 100px; transition: border-color .15s;
+  }
+  .detail-textarea:focus { border-color: var(--primary); }
+  .updates-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+  .update-item { display: flex; gap: 10px; margin-bottom: 14px; }
+  .update-body { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; flex: 1; font-size: 13px; }
+  .update-author { font-weight: 700; margin-bottom: 2px; font-size: 12px; color: var(--text-muted); }
+  .update-text { color: var(--text); }
+  .update-compose { display: flex; gap: 10px; margin-top: 12px; }
+  .update-compose textarea {
+    flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: inherit; font-size: 13.5px; outline: none;
+    resize: none; height: 70px; transition: border-color .15s;
+  }
+  .update-compose textarea:focus { border-color: var(--primary); }
+
+  /* ─── NOTIFICATIONS ─── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; padding: 10px 20px; border-radius: var(--radius);
+    font-size: 13.5px; font-weight: 600; z-index: 999; box-shadow: var(--shadow-md);
+    animation: toastIn .25s ease;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%); } }
+
+  /* ─── EMPTY ─── */
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-state svg { width: 80px; height: 80px; color: var(--border); margin-bottom: 16px; }
+  .empty-state h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .empty-state p { color: var(--text-muted); font-size: 14px; }
+
+  /* ─── UTILS ─── */
+  .flex { display: flex; }
+  .gap-2 { gap: 8px; }
+  .ml-auto { margin-right: auto; }
+  .color-dot-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .color-dot-opt { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; transition: transform .15s; }
+  .color-dot-opt:hover { transform: scale(1.2); }
+  .color-dot-opt.selected { outline: 2.5px solid var(--text); outline-offset: 2px; }
+  
+  /* Progress bar */
+  .progress-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; width: 100%; }
+  .progress-bar-fill { height: 100%; background: var(--done); border-radius: 3px; transition: width .3s; }
+
+  /* Highlighted row */
+  .table-row.selected { background: var(--primary-light) !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">W</div>
+    <div class="logo-text">WorkBoard</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" placeholder="🔍 חיפוש..."/>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="setView('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">ראשי</span>
+    </div>
+    <div class="nav-item" onclick="setView('inbox')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+      <span class="nav-label">תיבת דואר</span>
+    </div>
+    <div class="nav-item" onclick="setView('my-work')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.2 20c.4-2.2 3.5-4 6.8-4s6.4 1.8 6.8 4"/></svg>
+      <span class="nav-label">העבודה שלי</span>
+    </div>
+    <div class="nav-item" onclick="setView('favorites')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span class="nav-label">מועדפים</span>
+    </div>
+
+    <div class="section-title">המרחב שלי</div>
+    <div id="board-list"></div>
+    <div class="new-board-btn" onclick="openNewBoardModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>לוח חדש</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="avatar-sm" style="background:linear-gradient(135deg,#0073ea,#a25ddc)">ע</div>
+    <div class="workspace-name">עבודה שלי</div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════ MAIN -->
+<div class="main">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="btn btn-secondary" style="padding:6px 10px" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:17px;height:17px"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-title" id="board-title">לטעינה...</div>
+    <div class="topbar-actions">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="חיפוש פריט..." id="search-input" oninput="filterRows()"/>
+      </div>
+      <button class="btn btn-secondary" onclick="openInviteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-1a6 6 0 0112 0v1"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+        הזמן
+      </button>
+      <button class="btn btn-primary" onclick="openAddItemModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        פריט חדש
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW TABS -->
+  <div class="view-tabs">
+    <div class="view-tab active" id="tab-table" onclick="switchView('table')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      תצוגת לוח
+    </div>
+    <div class="view-tab" id="tab-kanban" onclick="switchView('kanban')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="5" height="15"/></svg>
+      קנבן
+    </div>
+    <div class="view-tab" id="tab-chart" onclick="switchView('chart')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      תרשים
+    </div>
+    <div class="view-tab-add" title="הוסף תצוגה">+</div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="toolbar-btn" onclick="openAddItemModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      פריט חדש
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      סנן
+    </button>
+    <button class="toolbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      מיין
+    </button>
+    <button class="toolbar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M20.49 12H22M2 12h1.51M18.66 18.66l1.41 1.41M4.93 4.93l1.41 1.41M12 20.49V22M12 2v1.51"/></svg>
+      קבץ לפי
+    </button>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="selected-actions" style="display:none;color:var(--red)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      מחק נבחרים
+    </button>
+    <div style="margin-right:auto;font-size:12px;color:var(--text-muted)" id="row-count-label"></div>
+  </div>
+
+  <!-- BOARD CONTAINER -->
+  <div class="board-container" id="board-container"></div>
+</div>
+
+<!-- ─── DROPDOWNS / MODALS ─── -->
+<div id="dropdown-container"></div>
+<div id="modal-container"></div>
+
+<script>
+// ═══════════════════════════════ DATA
+const COLORS = ['#0073ea','#a25ddc','#00c875','#fdab3d','#e44258','#03a9f4','#ff5ac4','#ffcb00','#333'];
+const PEOPLE = [
+  {name:'דנה כהן', color:'#0073ea', initials:'ד'},
+  {name:'אלון לוי', color:'#a25ddc', initials:'א'},
+  {name:'מיכל שחר', color:'#00c875', initials:'מ'},
+  {name:'רון גל', color:'#fdab3d', initials:'ר'},
+  {name:'שני בר', color:'#e44258', initials:'ש'},
+];
+
+let data = {
+  boards: [
+    {
+      id: 'b1', name: 'פרויקט השקת מוצר', color: '#0073ea',
+      groups: [
+        {
+          id: 'g1', name: 'בהכנה', color: '#0073ea', collapsed: false,
+          items: [
+            {id:'i1', name:'עיצוב לוגו חדש', status:'working', priority:'high', date:'2024-12-20', person:[0,2], notes:'', updates:[], num:3},
+            {id:'i2', name:'כתיבת תוכן שיווקי', status:'not-started', priority:'medium', date:'2024-12-28', person:[1], notes:'', updates:[], num:0},
+            {id:'i3', name:'בניית אתר אינטרנט', status:'working', priority:'critical', date:'2025-01-05', person:[0,1,2], notes:'', updates:[], num:12},
+          ]
+        },
+        {
+          id: 'g2', name: 'בביצוע', color: '#00c875', collapsed: false,
+          items: [
+            {id:'i4', name:'הכנת מצגת השקה', status:'done', priority:'high', date:'2024-12-15', person:[3], notes:'', updates:[], num:5},
+            {id:'i5', name:'רשימת לקוחות פוטנציאליים', status:'done', priority:'low', date:'2024-12-18', person:[4], notes:'', updates:[], num:8},
+            {id:'i6', name:'אסטרטגיית מדיה חברתית', status:'stuck', priority:'high', date:'2024-12-22', person:[2,3], notes:'', updates:[], num:2},
+          ]
+        },
+        {
+          id: 'g3', name: 'הושלם', color: '#a25ddc', collapsed: false,
+          items: [
+            {id:'i7', name:'מחקר שוק ראשוני', status:'done', priority:'none', date:'2024-12-01', person:[1], notes:'', updates:[], num:100},
+            {id:'i8', name:'הגדרת קהל יעד', status:'done', priority:'none', date:'2024-12-05', person:[0], notes:'', updates:[], num:50},
+          ]
+        }
+      ]
+    },
+    {
+      id: 'b2', name: 'פיתוח מוצר Q1', color: '#a25ddc',
+      groups: [
+        {
+          id: 'g4', name: 'ספרינט 1', color: '#a25ddc', collapsed: false,
+          items: [
+            {id:'i9', name:'API בסיס', status:'done', priority:'critical', date:'2025-01-10', person:[0], notes:'', updates:[], num:20},
+            {id:'i10', name:'מסך התחברות', status:'working', priority:'high', date:'2025-01-15', person:[1,2], notes:'', updates:[], num:5},
+            {id:'i11', name:'דף ראשי', status:'not-started', priority:'medium', date:'2025-01-20', person:[3], notes:'', updates:[], num:0},
+          ]
+        }
+      ]
+    },
+    {
+      id: 'b3', name: 'ניהול לקוחות', color: '#00c875',
+      groups: [
+        {
+          id: 'g5', name: 'לקוחות פעילים', color: '#00c875', collapsed: false,
+          items: [
+            {id:'i12', name:'פגישה עם לקוח A', status:'done', priority:'high', date:'2024-12-19', person:[0,4], notes:'', updates:[], num:0},
+            {id:'i13', name:'הצעת מחיר לחברת B', status:'working', priority:'medium', date:'2024-12-25', person:[1], notes:'', updates:[], num:0},
+          ]
+        }
+      ]
+    }
+  ],
+  activeBoardId: 'b1'
+};
+
+// ═══════════════════════════════ STATE
+let activeView = 'table';
+let dropdown = null;
+let selectedRows = new Set();
+
+// ═══════════════════════════════ HELPERS
+function getBoard(id) { return data.boards.find(b => b.id === (id || data.activeBoardId)); }
+function getGroup(board, gid) { return board.groups.find(g => g.id === gid); }
+function getItem(board, iid) { for(const g of board.groups) { const it = g.items.find(i=>i.id===iid); if(it) return {item:it,group:g}; } return null; }
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+const STATUS_LABELS = {'done':'הושלם','working':'בעבודה','stuck':'תקוע','not-started':'לא התחיל'};
+const PRIORITY_LABELS = {'critical':'קריטי','high':'גבוה','medium':'בינוני','low':'נמוך','none':'ללא'};
+
+function statusClass(s) { return 'status-'+s; }
+function priorityClass(p) { return 'priority-'+p; }
+
+// ═══════════════════════════════ RENDER SIDEBAR
+function renderSidebar() {
+  const list = document.getElementById('board-list');
+  list.innerHTML = data.boards.map(b => `
+    <div class="board-item ${b.id===data.activeBoardId?'active':''}" onclick="switchBoard('${b.id}')">
+      <div class="board-dot" style="background:${b.color}"></div>
+      <span class="board-name-text">${b.name}</span>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════ RENDER BOARD
+function renderBoard() {
+  const board = getBoard();
+  document.getElementById('board-title').textContent = board.name;
+  renderSidebar();
+
+  if(activeView === 'table') renderTableView();
+  else if(activeView === 'kanban') renderKanbanView();
+  else renderChartView();
+}
+
+function renderTableView() {
+  const board = getBoard();
+  const search = (document.getElementById('search-input').value||'').toLowerCase();
+  const container = document.getElementById('board-container');
+
+  let html = '<div class="board-table">';
+
+  // Column headers
+  html += `<div class="col-header-row" style="margin-right:36px">
+    <div class="col-header-item" style="padding-right:46px">שם פריט</div>
+    <div class="col-header-item fixed-col">סטטוס</div>
+    <div class="col-header-item fixed-col">עדיפות</div>
+    <div class="col-header-item fixed-col">תאריך יעד</div>
+    <div class="col-header-item fixed-col">אחראי</div>
+    <div class="col-header-item fixed-col" style="width:100px">מספרים</div>
+    <div class="col-header-item" style="width:40px"></div>
+  </div>`;
+
+  for(const group of board.groups) {
+    const visibleItems = group.items.filter(i => !search || i.name.toLowerCase().includes(search));
+    html += `<div class="group-block ${group.collapsed?'collapsed':''}" id="grp-${group.id}">
+      <div class="group-header" onclick="toggleGroup('${group.id}')">
+        <div class="group-color-bar" style="background:${group.color}"></div>
+        <input class="group-title-input" value="${group.name}" onclick="event.stopPropagation()"
+          onchange="renameGroup('${group.id}',this.value)" style="color:${group.color}"/>
+        <span class="group-count">${group.items.length} פריטים</span>
+        <div class="group-collapse-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="group-table">`;
+
+    if(visibleItems.length===0 && search) {
+      html += `<div style="padding:16px 20px;color:var(--text-muted);font-size:13px">אין תוצאות</div>`;
+    }
+
+    for(const item of visibleItems) {
+      const selected = selectedRows.has(item.id);
+      html += `<div class="table-row ${selected?'selected':''}" id="row-${item.id}"
+          draggable="true"
+          ondragstart="dragStart(event,'${item.id}','${group.id}')"
+          ondragover="dragOver(event)"
+          ondrop="drop(event,'${group.id}')"
+          ondragleave="dragLeave(event)">
+        <div class="row-check">
+          <input type="checkbox" ${selected?'checked':''} onchange="toggleSelect('${item.id}')" onclick="event.stopPropagation()"/>
+        </div>
+        <div class="cell name-cell">
+          <div class="row-drag-handle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+          </div>
+          <input class="item-name-input" value="${item.name}"
+            onchange="updateItem('${item.id}','name',this.value)"
+            onclick="openItemDetail('${item.id}')"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--text-light);cursor:pointer;flex-shrink:0" onclick="openItemDetail('${item.id}')"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="cell fixed-col" onclick="openStatusDropdown(event,'${item.id}')">
+          <div class="status-cell ${statusClass(item.status)}">${STATUS_LABELS[item.status]||item.status}</div>
+        </div>
+        <div class="cell fixed-col" onclick="openPriorityDropdown(event,'${item.id}')">
+          <div class="priority-cell ${priorityClass(item.priority)}">${PRIORITY_LABELS[item.priority]||item.priority}</div>
+        </div>
+        <div class="cell fixed-col">
+          <input type="date" class="date-input" value="${item.date}" onchange="updateItem('${item.id}','date',this.value)"/>
+        </div>
+        <div class="cell fixed-col">
+          <div class="person-cell">
+            ${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color}" title="${PEOPLE[pi].name}">${PEOPLE[pi].initials}</div>`).join('')}
+            <div class="avatar-add" onclick="openPersonDropdown(event,'${item.id}')">+</div>
+          </div>
+        </div>
+        <div class="cell" style="width:100px">
+          <input class="num-input" type="number" value="${item.num}" onchange="updateItem('${item.id}','num',+this.value)"/>
+        </div>
+        <div class="cell" style="width:40px;cursor:pointer;color:var(--text-muted)" onclick="openRowMenu(event,'${item.id}','${group.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </div>
+      </div>`;
+    }
+
+    // Summary row
+    const totalNum = group.items.reduce((s,i)=>s+i.num,0);
+    const doneCount = group.items.filter(i=>i.status==='done').length;
+    const pct = group.items.length ? Math.round(doneCount/group.items.length*100) : 0;
+    html += `<div class="summary-row">
+      <div style="width:36px"></div>
+      <div class="summary-cell name-cell">
+        <div style="display:flex;align-items:center;gap:8px;width:220px">
+          <div class="progress-bar-wrap" style="width:80px"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+          <span>${pct}%</span>
+        </div>
+      </div>
+      <div class="summary-cell fixed-col" style="text-align:center">${doneCount}/${group.items.length}</div>
+      <div class="summary-cell fixed-col"></div>
+      <div class="summary-cell fixed-col"></div>
+      <div class="summary-cell fixed-col"></div>
+      <div class="summary-cell" style="width:100px;text-align:center;font-weight:700">${totalNum}</div>
+      <div style="width:40px"></div>
+    </div>`;
+
+    html += `</div>`;  // group-table
+
+    // Add item row
+    html += `<div class="add-row" onclick="addItemToGroup('${group.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      הוסף פריט
+    </div>`;
+
+    html += `</div>`; // group-block
+  }
+
+  html += `<button class="add-group-btn" onclick="openAddGroupModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    הוסף קבוצה
+  </button></div>`;
+
+  container.innerHTML = html;
+
+  updateSelectedActionsBar();
+  updateRowCountLabel();
+}
+
+// ═══════════════════════════════ KANBAN VIEW
+function renderKanbanView() {
+  const board = getBoard();
+  const container = document.getElementById('board-container');
+
+  const allStatuses = ['not-started','working','stuck','done'];
+  const colColors = {'not-started':'#c4c4c4','working':'#fdab3d','stuck':'#e44258','done':'#00c875'};
+
+  // Collect all items
+  const allItems = [];
+  for(const g of board.groups) for(const i of g.items) allItems.push({...i, groupName: g.name});
+
+  let html = `<div style="display:flex;gap:16px;min-width:max-content;padding-bottom:20px">`;
+  for(const st of allStatuses) {
+    const items = allItems.filter(i=>i.status===st);
+    html += `<div style="width:280px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${colColors[st]}"></div>
+        <span style="font-weight:700;font-size:14px">${STATUS_LABELS[st]}</span>
+        <span style="background:var(--border);border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600">${items.length}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">`;
+
+    for(const item of items) {
+      html += `<div style="background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);padding:12px 14px;cursor:pointer;transition:box-shadow .15s"
+        onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''"
+        onclick="openItemDetail('${item.id}')">
+        <div style="font-weight:600;font-size:13.5px;margin-bottom:8px">${item.name}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;color:var(--text-muted)">${item.groupName}</div>
+          <div style="display:flex;gap:3px">
+            ${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color};width:22px;height:22px;font-size:9px">${PEOPLE[pi].initials}</div>`).join('')}
+          </div>
+        </div>
+        ${item.date ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px">📅 ${item.date}</div>` : ''}
+      </div>`;
+    }
+
+    html += `<div style="border:1.5px dashed var(--border);border-radius:var(--radius);padding:10px;text-align:center;cursor:pointer;color:var(--text-muted);font-size:13px;transition:all .15s"
+      onmouseover="this.style.background='var(--primary-light)';this.style.color='var(--primary)'"
+      onmouseout="this.style.background='';this.style.color='var(--text-muted)'"
+      onclick="addKanbanItem('${st}')">+ הוסף פריט</div>`;
+    html += `</div></div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════ CHART VIEW
+function renderChartView() {
+  const board = getBoard();
+  const container = document.getElementById('board-container');
+
+  const allItems = [];
+  for(const g of board.groups) for(const i of g.items) allItems.push(i);
+
+  const statusCounts = {done:0,working:0,stuck:0,'not-started':0};
+  const priorityCounts = {critical:0,high:0,medium:0,low:0,none:0};
+  for(const i of allItems) { statusCounts[i.status]=(statusCounts[i.status]||0)+1; priorityCounts[i.priority]=(priorityCounts[i.priority]||0)+1; }
+
+  const max1 = Math.max(...Object.values(statusCounts));
+  const max2 = Math.max(...Object.values(priorityCounts));
+  const colorsStatus = {'done':'#00c875','working':'#fdab3d','stuck':'#e44258','not-started':'#c4c4c4'};
+  const colorsPriority = {'critical':'#333','high':'#e44258','medium':'#fdab3d','low':'#579bfc','none':'#c4c4c4'};
+
+  function bars(counts, labels, colors, max) {
+    return Object.entries(counts).map(([k,v])=>{
+      const pct = max ? Math.round(v/max*100) : 0;
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:90px;font-size:12px;font-weight:600;color:var(--text-muted);text-align:left">${labels[k]||k}</div>
+        <div style="flex:1;background:var(--border);border-radius:4px;height:28px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${colors[k]};border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;transition:width .5s ease" title="${v}">
+            <span style="color:#fff;font-size:12px;font-weight:700">${v}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  container.innerHTML = `<div style="max-width:700px">
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;border:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px">פילוח לפי סטטוס</div>
+      ${bars(statusCounts, STATUS_LABELS, colorsStatus, max1)}
+    </div>
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px">פילוח לפי עדיפות</div>
+      ${bars(priorityCounts, PRIORITY_LABELS, colorsPriority, max2)}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px">
+      ${[
+        {label:'סה"כ פריטים',val:allItems.length,color:'#0073ea'},
+        {label:'הושלמו',val:statusCounts.done,color:'#00c875'},
+        {label:'בעבודה',val:statusCounts.working,color:'#fdab3d'},
+        {label:'תקועים',val:statusCounts.stuck,color:'#e44258'},
+      ].map(s=>`<div style="background:var(--white);border-radius:var(--radius);padding:16px;border:1px solid var(--border);text-align:center">
+        <div style="font-size:28px;font-weight:800;color:${s.color}">${s.val}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:600">${s.label}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════ ACTIONS
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+function switchBoard(id) {
+  data.activeBoardId = id;
+  selectedRows.clear();
+  renderBoard();
+}
+
+function setView(v) {
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  event?.target?.closest('.nav-item')?.classList.add('active');
+  showToast('מעבר לתצוגה: '+v);
+}
+
+function switchView(v) {
+  activeView = v;
+  document.querySelectorAll('.view-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+v)?.classList.add('active');
+  renderBoard();
+}
+
+function toggleGroup(gid) {
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(g) { g.collapsed = !g.collapsed; }
+  const el = document.getElementById('grp-'+gid);
+  if(el) el.classList.toggle('collapsed');
+}
+
+function renameGroup(gid, name) {
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(g) g.name = name;
+}
+
+function updateItem(iid, field, val) {
+  const board = getBoard();
+  const res = getItem(board, iid);
+  if(res) { res.item[field] = val; renderBoard(); }
+}
+
+function toggleSelect(iid) {
+  if(selectedRows.has(iid)) selectedRows.delete(iid);
+  else selectedRows.add(iid);
+  updateSelectedActionsBar();
+}
+
+function updateSelectedActionsBar() {
+  const btn = document.getElementById('selected-actions');
+  if(btn) {
+    btn.style.display = selectedRows.size ? '' : 'none';
+    btn.onclick = () => { deleteSelected(); };
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg> מחק ${selectedRows.size} נבחרים`;
+  }
+}
+
+function updateRowCountLabel() {
+  const board = getBoard();
+  const total = board.groups.reduce((s,g)=>s+g.items.length,0);
+  const el = document.getElementById('row-count-label');
+  if(el) el.textContent = total + ' פריטים';
+}
+
+function deleteSelected() {
+  const board = getBoard();
+  for(const g of board.groups) {
+    g.items = g.items.filter(i=>!selectedRows.has(i.id));
+  }
+  selectedRows.clear();
+  renderBoard();
+  showToast('פריטים נמחקו');
+}
+
+function filterRows() { renderBoard(); }
+
+// ─── Drag & drop
+let dragItemId = null, dragGroupId = null;
+function dragStart(e, iid, gid) { dragItemId=iid; dragGroupId=gid; setTimeout(()=>document.getElementById('row-'+iid)?.classList.add('dragging'),0); }
+function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function drop(e, gid) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(!dragItemId || !dragGroupId) return;
+  const board = getBoard();
+  const srcGroup = getGroup(board, dragGroupId);
+  const dstGroup = getGroup(board, gid);
+  if(!srcGroup || !dstGroup) return;
+  const idx = srcGroup.items.findIndex(i=>i.id===dragItemId);
+  if(idx===-1) return;
+  const [item] = srcGroup.items.splice(idx,1);
+  dstGroup.items.push(item);
+  dragItemId=null; dragGroupId=null;
+  renderBoard();
+}
+
+// ═══════════════════════════════ DROPDOWNS
+function closeDropdown() {
+  document.getElementById('dropdown-container').innerHTML = '';
+  dropdown = null;
+}
+
+function openDropdown(x, y, items) {
+  closeDropdown();
+  const c = document.getElementById('dropdown-container');
+  const overlay = document.createElement('div');
+  overlay.className='dropdown-overlay';
+  overlay.onclick = closeDropdown;
+  const menu = document.createElement('div');
+  menu.className='dropdown-menu';
+  menu.style.top = Math.min(y, window.innerHeight-300)+'px';
+  menu.style.right = (window.innerWidth-x)+'px';
+  menu.innerHTML = items.map(item=>`<div class="dropdown-item" onclick="${item.action}">
+    ${item.dot?`<div class="dropdown-dot" style="background:${item.dot}"></div>`:''}
+    ${item.label}
+  </div>`).join('');
+  c.appendChild(overlay);
+  c.appendChild(menu);
+}
+
+function openStatusDropdown(e, iid) {
+  e.stopPropagation();
+  const rect = e.currentTarget.getBoundingClientRect();
+  openDropdown(rect.right, rect.bottom+4, [
+    {label:'הושלם', dot:'#00c875', action:`updateItem('${iid}','status','done');closeDropdown()`},
+    {label:'בעבודה', dot:'#fdab3d', action:`updateItem('${iid}','status','working');closeDropdown()`},
+    {label:'תקוע', dot:'#e44258', action:`updateItem('${iid}','status','stuck');closeDropdown()`},
+    {label:'לא התחיל', dot:'#c4c4c4', action:`updateItem('${iid}','status','not-started');closeDropdown()`},
+  ]);
+}
+
+function openPriorityDropdown(e, iid) {
+  e.stopPropagation();
+  const rect = e.currentTarget.getBoundingClientRect();
+  openDropdown(rect.right, rect.bottom+4, [
+    {label:'קריטי', dot:'#333', action:`updateItem('${iid}','priority','critical');closeDropdown()`},
+    {label:'גבוה', dot:'#e44258', action:`updateItem('${iid}','priority','high');closeDropdown()`},
+    {label:'בינוני', dot:'#fdab3d', action:`updateItem('${iid}','priority','medium');closeDropdown()`},
+    {label:'נמוך', dot:'#579bfc', action:`updateItem('${iid}','priority','low');closeDropdown()`},
+    {label:'ללא', dot:'#c4c4c4', action:`updateItem('${iid}','priority','none');closeDropdown()`},
+  ]);
+}
+
+function openPersonDropdown(e, iid) {
+  e.stopPropagation();
+  const rect = e.currentTarget.getBoundingClientRect();
+  openDropdown(rect.right, rect.bottom+4,
+    PEOPLE.map((p,pi)=>({
+      label: p.name, dot: p.color,
+      action: `togglePerson('${iid}',${pi});closeDropdown()`
+    }))
+  );
+}
+
+function togglePerson(iid, pi) {
+  const board = getBoard();
+  const res = getItem(board, iid);
+  if(!res) return;
+  const arr = res.item.person;
+  const idx = arr.indexOf(pi);
+  if(idx===-1) arr.push(pi); else arr.splice(idx,1);
+  renderBoard();
+}
+
+function openRowMenu(e, iid, gid) {
+  e.stopPropagation();
+  const rect = e.currentTarget.getBoundingClientRect();
+  openDropdown(rect.right, rect.bottom+4, [
+    {label:'פתח פריט', action:`closeDropdown();openItemDetail('${iid}')`},
+    {label:'שכפל', action:`closeDropdown();duplicateItem('${iid}','${gid}')`},
+    {label:'מחק', action:`closeDropdown();deleteItem('${iid}','${gid}')`},
+  ]);
+}
+
+function duplicateItem(iid, gid) {
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(!g) return;
+  const idx = g.items.findIndex(i=>i.id===iid);
+  if(idx===-1) return;
+  const copy = {...g.items[idx], id:uid(), name:g.items[idx].name+' (עותק)', person:[...g.items[idx].person]};
+  g.items.splice(idx+1,0,copy);
+  renderBoard();
+  showToast('פריט שוכפל');
+}
+
+function deleteItem(iid, gid) {
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(!g) return;
+  g.items = g.items.filter(i=>i.id!==iid);
+  renderBoard();
+  showToast('פריט נמחק');
+}
+
+// ═══════════════════════════════ MODALS
+function closeModal() { document.getElementById('modal-container').innerHTML=''; }
+
+function openModal(html) {
+  const c = document.getElementById('modal-container');
+  c.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+}
+
+function openNewBoardModal() {
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><div class="modal-title">לוח חדש</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="new-board-name" placeholder="שם הלוח" autofocus/>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+      <button class="btn btn-primary" onclick="createBoard()">צור לוח</button>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('new-board-name')?.focus(),50);
+}
+
+function createBoard() {
+  const name = document.getElementById('new-board-name').value.trim();
+  if(!name) return;
+  const id = 'b'+uid();
+  const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+  data.boards.push({
+    id, name, color,
+    groups: [{id:'g'+uid(), name:'קבוצה ראשונה', color, collapsed:false, items:[]}]
+  });
+  data.activeBoardId = id;
+  closeModal();
+  renderBoard();
+  showToast('לוח נוצר!');
+}
+
+function openAddItemModal() {
+  const board = getBoard();
+  const groupOpts = board.groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><div class="modal-title">פריט חדש</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="new-item-name" placeholder="שם הפריט" autofocus/>
+    <select class="modal-input" id="new-item-group" style="cursor:pointer">${groupOpts}</select>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+      <button class="btn btn-primary" onclick="createItem()">הוסף</button>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('new-item-name')?.focus(),50);
+}
+
+function createItem() {
+  const name = document.getElementById('new-item-name')?.value.trim();
+  const gid = document.getElementById('new-item-group')?.value;
+  if(!name||!gid) return;
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(g) g.items.push({id:uid(), name, status:'not-started', priority:'none', date:'', person:[], notes:'', updates:[], num:0});
+  closeModal();
+  renderBoard();
+  showToast('פריט נוסף!');
+}
+
+function addItemToGroup(gid) {
+  const board = getBoard();
+  const g = getGroup(board, gid);
+  if(!g) return;
+  const id = uid();
+  g.items.push({id, name:'פריט חדש', status:'not-started', priority:'none', date:'', person:[], notes:'', updates:[], num:0});
+  renderBoard();
+  // focus new row name
+  setTimeout(()=>{
+    const inp = document.querySelector(`#row-${id} .item-name-input`);
+    if(inp){inp.focus();inp.select();}
+  },50);
+}
+
+function addKanbanItem(status) {
+  const board = getBoard();
+  if(!board.groups.length) return;
+  const g = board.groups[0];
+  g.items.push({id:uid(), name:'פריט חדש', status, priority:'none', date:'', person:[], notes:'', updates:[], num:0});
+  renderBoard();
+}
+
+function openAddGroupModal() {
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><div class="modal-title">קבוצה חדשה</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" id="new-group-name" placeholder="שם הקבוצה" autofocus/>
+    <div class="color-dot-picker" id="group-color-picker">
+      ${COLORS.map((c,i)=>`<div class="color-dot-opt ${i===0?'selected':''}" style="background:${c}" onclick="selectGroupColor('${c}',this)"></div>`).join('')}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+      <button class="btn btn-primary" onclick="createGroup()">צור קבוצה</button>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('new-group-name')?.focus(),50);
+}
+
+let newGroupColor = COLORS[0];
+function selectGroupColor(c, el) {
+  newGroupColor = c;
+  document.querySelectorAll('.color-dot-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function createGroup() {
+  const name = document.getElementById('new-group-name')?.value.trim();
+  if(!name) return;
+  const board = getBoard();
+  board.groups.push({id:'g'+uid(), name, color:newGroupColor||COLORS[0], collapsed:false, items:[]});
+  closeModal();
+  renderBoard();
+  showToast('קבוצה נוצרה!');
+}
+
+function openInviteModal() {
+  openModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><div class="modal-title">הזמן משתמשים</div><div class="modal-close" onclick="closeModal()">×</div></div>
+    <input class="modal-input" type="email" placeholder="כתובת אימייל" id="invite-email" autofocus/>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">חברי הצוות הנוכחיים:</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      ${PEOPLE.map(p=>`<div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="background:${p.color};width:32px;height:32px;font-size:13px">${p.initials}</div>
+        <div style="font-size:13.5px;font-weight:500">${p.name}</div>
+        <div style="margin-right:auto;font-size:12px;background:var(--bg);padding:2px 8px;border-radius:10px;color:var(--text-muted)">חבר</div>
+      </div>`).join('')}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">סגור</button>
+      <button class="btn btn-primary" onclick="showToast('הזמנה נשלחה!');closeModal()">שלח הזמנה</button>
+    </div>
+  </div>`);
+  setTimeout(()=>document.getElementById('invite-email')?.focus(),50);
+}
+
+// ═══════════════════════════════ ITEM DETAIL PANEL
+function openItemDetail(iid) {
+  const board = getBoard();
+  const res = getItem(board, iid);
+  if(!res) return;
+  const item = res.item;
+
+  const c = document.getElementById('modal-container');
+  c.innerHTML = `<div class="item-detail-overlay" onclick="if(event.target===this)closeItemDetail()">
+    <div class="item-detail-panel" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text-muted)">📋 ${res.group.name}</div>
+        <div class="modal-close" onclick="closeItemDetail()">×</div>
+      </div>
+      <input class="detail-title-input" id="detail-title" value="${item.name}" onchange="updateItem('${iid}','name',this.value)"/>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div>
+          <div class="detail-label">סטטוס</div>
+          <div class="status-cell ${statusClass(item.status)}" style="cursor:pointer;display:inline-block"
+            onclick="cycleStatus('${iid}')">${STATUS_LABELS[item.status]}</div>
+        </div>
+        <div>
+          <div class="detail-label">עדיפות</div>
+          <div class="priority-cell ${priorityClass(item.priority)}" style="cursor:pointer;display:inline-block"
+            onclick="cyclePriority('${iid}')">${PRIORITY_LABELS[item.priority]}</div>
+        </div>
+        <div>
+          <div class="detail-label">תאריך יעד</div>
+          <input type="date" class="modal-input" style="margin-bottom:0" value="${item.date}" onchange="updateItem('${iid}','date',this.value)"/>
+        </div>
+        <div>
+          <div class="detail-label">אחראי</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px">
+            ${item.person.map(pi=>`<div class="avatar" style="background:${PEOPLE[pi].color};width:30px;height:30px;font-size:11px" title="${PEOPLE[pi].name}">${PEOPLE[pi].initials}</div>`).join('')}
+            ${PEOPLE.filter((_,pi)=>!item.person.includes(pi)).map((_,pi)=>`<div class="avatar-add" title="הוסף" onclick="togglePerson('${iid}',${item.person.includes(pi)?item.person.indexOf(pi):pi})" style="width:30px;height:30px">+</div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-field">
+        <div class="detail-label">תיאור</div>
+        <textarea class="detail-textarea" placeholder="הוסף תיאור..." onchange="updateItem('${iid}','notes',this.value)">${item.notes||''}</textarea>
+      </div>
+
+      <div class="updates-section">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px">עדכונים</div>
+        <div id="updates-list-${iid}">
+          ${(item.updates||[]).map(u=>`<div class="update-item">
+            <div class="avatar" style="background:${PEOPLE[0].color};width:30px;height:30px;font-size:11px;flex-shrink:0">${PEOPLE[0].initials}</div>
+            <div class="update-body">
+              <div class="update-author">${u.author} • ${u.time}</div>
+              <div class="update-text">${u.text}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+        <div class="update-compose">
+          <div class="avatar" style="background:${PEOPLE[0].color};width:30px;height:30px;font-size:11px;flex-shrink:0">${PEOPLE[0].initials}</div>
+          <div style="flex:1">
+            <textarea id="update-text-${iid}" placeholder="כתוב עדכון..."></textarea>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="addUpdate('${iid}')">שלח</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function closeItemDetail() { document.getElementById('modal-container').innerHTML=''; renderBoard(); }
+
+function addUpdate(iid) {
+  const board = getBoard();
+  const res = getItem(board, iid);
+  const ta = document.getElementById('update-text-'+iid);
+  if(!res||!ta||!ta.value.trim()) return;
+  if(!res.item.updates) res.item.updates=[];
+  res.item.updates.push({author:'אתה', time:'עכשיו', text:ta.value.trim()});
+  ta.value='';
+  // refresh updates list
+  const list = document.getElementById('updates-list-'+iid);
+  if(list) list.innerHTML = res.item.updates.map(u=>`<div class="update-item">
+    <div class="avatar" style="background:${PEOPLE[0].color};width:30px;height:30px;font-size:11px;flex-shrink:0">${PEOPLE[0].initials}</div>
+    <div class="update-body">
+      <div class="update-author">${u.author} • ${u.time}</div>
+      <div class="update-text">${u.text}</div>
+    </div>
+  </div>`).join('');
+}
+
+function cycleStatus(iid) {
+  const statuses = ['not-started','working','stuck','done'];
+  const board = getBoard();
+  const res = getItem(board, iid);
+  if(!res) return;
+  const ci = statuses.indexOf(res.item.status);
+  res.item.status = statuses[(ci+1)%statuses.length];
+  openItemDetail(iid);
+}
+
+function cyclePriority(iid) {
+  const priorities = ['none','low','medium','high','critical'];
+  const board = getBoard();
+  const res = getItem(board, iid);
+  if(!res) return;
+  const ci = priorities.indexOf(res.item.priority);
+  res.item.priority = priorities[(ci+1)%priorities.length];
+  openItemDetail(iid);
+}
+
+// ═══════════════════════════════ TOAST
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if(existing) existing.remove();
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+
+// ═══════════════════════════════ INIT
+renderBoard();
+</script>
+</body>
+</html>
